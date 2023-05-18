@@ -1,3 +1,3 @@
 
-def control(block) -> tuple[float, float]:
-    return -block.x * 1, -block.y * 0.05
+def control(ball) -> tuple[float, float]:
+    return -ball.x * 0.8, -ball.y * 0.3

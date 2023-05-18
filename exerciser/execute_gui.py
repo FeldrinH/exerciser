@@ -50,7 +50,7 @@ def _validate_solution_module(solution_module):
     except:
         raise ValidationError(f"Solution file ({Path(solution_module.__file__).name}) must contain top-level control() function!")
 
-def run(exercise_constructor: Type[Exercise]):
+def run(exercise_constructor: Type[Exercise], autorestart_default: bool):
     if len(sys.argv) != 2:
         print("ERROR: Wrong number of arguments!")
         print(f"Usage: python {sys.argv[0]} solution.py")
@@ -92,6 +92,8 @@ def run(exercise_constructor: Type[Exercise]):
     variables_font = pygame.font.SysFont('Arial', 20)
     running = True
 
+    autorestart = autorestart_default
+
     exercise = exercise_constructor()
     args = exercise.get_args()
     graph = GraphPlotter(800)
@@ -104,9 +106,13 @@ def run(exercise_constructor: Type[Exercise]):
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
-                    exercise = exercise_constructor()
-                    args = exercise.get_args()
-                    graph.clear()
+                    if event.mod & pygame.KMOD_CTRL:
+                        autorestart = not autorestart
+                        show_message("Automatic restart enabled" if autorestart else "Automatic restart disabled", "green2", 2000)
+                    else:
+                        exercise = exercise_constructor()
+                        args = exercise.get_args()
+                        graph.clear()
         
         # TODO: Optimize this?
         if pygame.time.get_ticks() - last_reload_check >= 1000:
@@ -125,6 +131,10 @@ def run(exercise_constructor: Type[Exercise]):
                     try:
                         _validate_solution_module(solution_module)
                         solution_module_valid = True
+                        if autorestart:
+                            exercise = exercise_constructor()
+                            args = exercise.get_args()
+                            graph.clear()
                     except ValidationError as e:
                         show_message(f"Invalid solution: {e}", "red", None)
 
@@ -137,8 +147,16 @@ def run(exercise_constructor: Type[Exercise]):
                 traceback.print_exc()
                 solution_module_valid = False
             else:
-                # Tick with fixed delta to ensure that simulation is as deterministic as possible
-                exercise.tick(1 / 60, control_return)
+                try:
+                    # Tick with fixed delta to ensure that simulation is as deterministic as possible
+                    exercise.tick(1 / 60, control_return)
+                except ValidationError as e:
+                    show_message(f"Invalid solution: {e}", "red", None)
+                    solution_module_valid = False
+                except Exception as e:
+                    show_message(f"Error while running exercise tick (this should not happen): {type(e).__name__}: {e}", "red", None)
+                    traceback.print_exc()
+                    solution_module_valid = False
 
         screen.fill("white")
 

@@ -1,3 +1,4 @@
+import numbers
 import exerciser
 import pygame
 import numpy as np
@@ -17,7 +18,12 @@ class BlockExercise:
         return { "ball": self.ball }
     
     def tick(self, delta, control_return):
-        acceleration = np.clip(control_return, -1000, 1000)
+        try:
+            acceleration = np.clip(control_return, -1000, 1000)
+        except:
+            raise exerciser.ValidationError("control function did not return numbers!")
+        if acceleration.size < 2:
+            raise exerciser.ValidationError("control function did not return two numbers!")
         self.ball.vx += acceleration[0] * delta
         self.ball.vy += acceleration[1] * delta
         self.ball.x += self.ball.vx * delta
@@ -31,4 +37,4 @@ class BlockExercise:
         exerciser.pygame.draw_arrow(screen, "blue", center_pos, self.ball._last_acceleration, 2)
     
 if __name__ == '__main__':
-    exerciser.run(BlockExercise)
+    exerciser.run(BlockExercise, False)
