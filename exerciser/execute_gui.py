@@ -59,8 +59,9 @@ def run(exercise_constructor: Type[Exercise], autorestart_default: bool):
     solution_file = sys.argv[1]
 
     if not Path(solution_file).exists():
-        print(f"ERROR: Solution file {solution_file} does not exist!")
-        sys.exit(1)
+        print(f"Solution file {solution_file} did not exist! It was created based on a template.")
+        with open(solution_file, mode='w', encoding='utf8') as f:
+            f.write(exercise_constructor.get_template())
     
     last_mtime = os.stat(solution_file).st_mtime
     solution_module = _load_module_from_file(solution_file)

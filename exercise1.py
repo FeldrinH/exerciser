@@ -13,6 +13,13 @@ class PointMass:
 class BlockExercise:
     def __init__(self):
         self.ball = PointMass()
+    
+    @staticmethod
+    def get_template() -> str:
+        return """
+def control(ball) -> tuple[float, float]:
+    return 0.0, 0.0
+"""
 
     def get_args(self):
         return { "ball": self.ball }

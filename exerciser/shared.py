@@ -9,6 +9,11 @@ class Exercise(Protocol):
     def __init__(self):
         ...
 
+    @staticmethod
+    @abstractmethod
+    def get_template() -> str:
+        raise NotImplementedError
+
     @abstractmethod
     def get_args(self) -> dict[str, Any]:
         raise NotImplementedError
