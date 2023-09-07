@@ -1,18 +1,16 @@
 from abc import abstractmethod
-from typing import Any, Protocol
+from typing import Any, ClassVar, Protocol
 import pygame
 
 class ValidationError(RuntimeError):
     pass
 
 class Exercise(Protocol):
+    name: ClassVar[str]
+    template: ClassVar[str]
+
     def __init__(self):
         ...
-
-    @staticmethod
-    @abstractmethod
-    def get_template() -> str:
-        raise NotImplementedError
 
     @abstractmethod
     def get_args(self) -> dict[str, Any]:

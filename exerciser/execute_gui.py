@@ -1,7 +1,7 @@
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import copy
-from typing import Type
+from typing import Callable, Type
 import numbers
 import importlib.util
 from pathlib import Path
@@ -13,22 +13,15 @@ from .shared import Exercise, ValidationError
 from .graph_plotter import GraphPlotter
 
 
-def _load_module_from_file(file: str) -> ModuleType:
-    # TODO: Better way to guarantee that module is unique?
-    name = f'_solution_{Path(file).stem}'
-
-    # From https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
-    spec = importlib.util.spec_from_file_location(name, file)
-    assert spec and spec.loader
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-
-    return module
+def _prepare_module_for_reload(module: ModuleType):
+    # TODO: This creates a spec if a spec is missing, which is never done in the documentation. Is this somehow unsound?
+    if not module.__spec__:
+        loader = module.__loader__
+        assert loader
+        module.__spec__ = importlib.util.spec_from_loader(module.__name__, loader) # type: ignore
 
 def _reload_module(module: ModuleType):
-    # NB: Only use this for modules loaded using _load_module_from_file!
-
+    # NB: Only use this for modules prepared using _prepare_module_for_reload!
     spec = module.__spec__
     assert spec and spec.loader
 
@@ -38,39 +31,34 @@ def _reload_module(module: ModuleType):
         if not key.startswith('__'):
             delattr(module, key)
 
+    # TODO: What is the actual difference between importlib.reload and spec.loader.exec_module?
+    # importlib.reload(module)    
     spec.loader.exec_module(module)
 
-def _validate_solution_module(solution_module):
-    # Check that
-    # a) control function exists
-    # b) control function is callable
-    try:
-        if not callable(solution_module.control):
-            raise ValidationError
-    except:
-        raise ValidationError(f"Solution file ({Path(solution_module.__file__).name}) must contain top-level control() function!")
+_initialized = False
+_control_function = None
 
-def run(exercise_constructor: Type[Exercise], autorestart_default: bool):
-    if len(sys.argv) != 2:
-        print("ERROR: Wrong number of arguments!")
-        print(f"Usage: python {sys.argv[0]} solution.py")
-        sys.exit(1)
+def run(exercise_constructor: Type[Exercise], new_control_function: Callable, *, autorestart_default: bool = False):
+    global _initialized, _control_function
+    _control_function = new_control_function
+    if _initialized:
+        return
+    _initialized = True
 
-    solution_file = sys.argv[1]
-
-    if not Path(solution_file).exists():
-        print(f"Solution file {solution_file} did not exist! It was created based on a template.")
-        with open(solution_file, mode='w', encoding='utf8') as f:
-            f.write(exercise_constructor.get_template())
+    # TODO: Figure out a way to reimplement solution file creation from template.
+    # if not Path(solution_file).exists():
+    #     print(f"Solution file {solution_file} did not exist! It was created based on a template.")
+    #     with open(solution_file, mode='w', encoding='utf8') as f:
+    #         f.write(exercise_constructor.get_template())
     
-    last_mtime = os.stat(solution_file).st_mtime
-    solution_module = _load_module_from_file(solution_file)
+    # TODO: Maybe pass in the module instead?
+    # TODO: Python importlib docs recommend against reloading __main__. Is reloading __main__ somehow unsound?
+    solution_module = sys.modules['__main__']
+    _prepare_module_for_reload(solution_module)
 
-    try:
-        _validate_solution_module(solution_module)
-    except ValidationError as e:
-        print(f"ERROR: Invalid solution: {e}")
-        sys.exit(1)
+    solution_file = solution_module.__file__
+    assert solution_file
+    last_mtime = os.stat(solution_file).st_mtime
 
     solution_module_valid = True
 
@@ -88,7 +76,7 @@ def run(exercise_constructor: Type[Exercise], autorestart_default: bool):
     pygame.init()
     pygame.font.init()
     screen = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
-    pygame.display.set_caption(f"Exerciser - {Path(sys.argv[0]).name} / {Path(solution_file).name}")
+    pygame.display.set_caption(f"Exerciser - {exercise_constructor.name} / {Path(solution_file).name}")
     clock = pygame.time.Clock()
     variables_font = pygame.font.SysFont('Arial', 20)
     running = True
@@ -121,28 +109,23 @@ def run(exercise_constructor: Type[Exercise], autorestart_default: bool):
             new_mtime = os.stat(solution_file).st_mtime
             if new_mtime != last_mtime:
                 last_mtime = new_mtime
-                solution_module_valid = False
                 try:
+                    _control_function = None
                     _reload_module(solution_module)
                     show_message("Reloaded solution", "blue", 2000)
                 except Exception as e:
                     show_message(f"Error reloading solution: {type(e).__name__}: {e}", "red", None)
                     traceback.print_exc()
                 else:
-                    try:
-                        _validate_solution_module(solution_module)
-                        solution_module_valid = True
-                        if autorestart:
-                            exercise = exercise_constructor()
-                            args = exercise.get_args()
-                            graph.clear()
-                    except ValidationError as e:
-                        show_message(f"Invalid solution: {e}", "red", None)
+                    if  autorestart and _control_function:
+                        exercise = exercise_constructor()
+                        args = exercise.get_args()
+                        graph.clear()
 
-        if solution_module_valid:
+        if solution_module_valid and _control_function:
             try:
                 # TODO: Deep copy might have performance or compatibility problems, depending on how complex the internal state is.
-                control_return = solution_module.control(*(copy.deepcopy(v) for v in args.values()))
+                control_return = _control_function(*(copy.deepcopy(v) for v in args.values()))
             except Exception as e:
                 show_message(f"Error while running control(): {type(e).__name__}: {e}", "red", None)
                 traceback.print_exc()

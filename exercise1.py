@@ -1,4 +1,5 @@
 import numbers
+from typing import Callable
 import exerciser
 import pygame
 import numpy as np
@@ -11,15 +12,15 @@ class PointMass:
     _last_acceleration = (0, 0)
 
 class BlockExercise:
-    def __init__(self):
-        self.ball = PointMass()
-    
-    @staticmethod
-    def get_template() -> str:
-        return """
+    name = "Exercise 1"
+
+    template = """
 def control(ball) -> tuple[float, float]:
     return 0.0, 0.0
 """
+
+    def __init__(self):
+        self.ball = PointMass()
 
     def get_args(self):
         return { "ball": self.ball }
@@ -42,6 +43,6 @@ def control(ball) -> tuple[float, float]:
         pygame.draw.circle(screen, "red", center_pos, 30)
         exerciser.pygame.draw_arrow(screen, "green3", center_pos, (self.ball.vx, self.ball.vy), 2)
         exerciser.pygame.draw_arrow(screen, "blue", center_pos, self.ball._last_acceleration, 2)
-    
-if __name__ == '__main__':
-    exerciser.run(BlockExercise, False)
+
+def run(control: Callable):
+    exerciser.run(BlockExercise, control)
