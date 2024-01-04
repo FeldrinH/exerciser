@@ -1,7 +1,8 @@
+import copy
 from dataclasses import dataclass
 import math
 import numbers
-from typing import Callable, Optional, Protocol
+from typing import Optional, Protocol
 from matplotlib.lines import Line2D
 import matplotlib.pyplot
 import exerciser
@@ -60,17 +61,17 @@ class BlockExercise:
         if not math.isnan(self.F):
             exerciser.pygame.draw_arrow(screen, "blue", center_pos, (self.F, 0), 2)
 
-def simulate(create_pid: Callable[[], PID], exercise: int):
-    # TODO: It would probably be more student-friendly to directly take in a PIDController,
-    #  but then we would have to reuse the presimulated state for the start of the simulation as well,
-    #  because otherwise the PID controller would have incorrect initial state.
+def simulate(pid: PID, exercise: int):
+    # TODO: Is there a meaningful risk that a student will create a PID class that breaks with deepcopy?
+    # TODO: The current presimulation approach is convenient, but assumes that the PID controller is deterministic, which is not guaranteed.
+    # TODO: The current presimulation approach means that any console output and other side effects in the first 30 seconds will happen twice.
 
     matplotlib.pyplot.clf()
     hist_t = np.arange(0, 30, exerciser.DELTA)
     hist_x = []
     hist_vx = []
     hist_F = []
-    presimulate_exercise = BlockExercise(create_pid(), None)
+    presimulate_exercise = BlockExercise(copy.deepcopy(pid), None)
     for t in hist_t:
         try:
             presimulate_exercise.tick(exerciser.DELTA)
@@ -88,7 +89,7 @@ def simulate(create_pid: Callable[[], PID], exercise: int):
     matplotlib.pyplot.legend()
     matplotlib.pyplot.show(block=False)
 
-    exerciser.run(BlockExercise(create_pid(), cursor))
+    exerciser.run(BlockExercise(pid, cursor))
 
 if __name__ == '__main__':
     raise RuntimeError("Do not run this file directly. Instead call the simulate(..) function from this module in your solution.")
