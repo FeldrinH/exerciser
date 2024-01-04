@@ -206,7 +206,6 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
         # See https://stackoverflow.com/questions/45729092/make-interactive-matplotlib-window-not-pop-to-front-on-each-update-windows-7 for more info.
         manager = matplotlib._pylab_helpers.Gcf.get_active()
         if manager is not None:
-            print("Yielding time to matplotlib")
             canvas = manager.canvas
             if canvas.figure.stale:
                 canvas.draw_idle()
