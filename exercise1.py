@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import math
-import sys
-from typing import Callable, Iterable, Protocol
+import numbers
+from typing import Callable, Optional, Protocol
 from matplotlib.lines import Line2D
 import matplotlib.pyplot
 import exerciser
@@ -16,27 +16,27 @@ class PID(Protocol):
 
 # This allows plotting with matplotlib in more or less real time.
 # TODO: Do we want to use this?
-class InteractivePlot:
-    def __init__(self, lines: list[Line2D]):
-        self.lines = lines
-        self.data_x = []
-        self.data_y = [[] for _ in lines]
-
-    def append(self, x: float, y: Iterable[float]):
-        self.data_x.append(x)
-        for i, val in enumerate(y):
-            self.data_y[i].append(val)
-
-    def draw(self):
-        # TODO: Only update on some ticks for performance? This makes the matplotlib window feel laggy.
-        if len(self.data_x) % 6 == 0:
-            for i, line in enumerate(self.lines):
-                line.set_xdata(self.data_x)
-                line.set_ydata(self.data_y[i])
-            matplotlib.pyplot.gca().relim()
-            matplotlib.pyplot.gca().autoscale_view()
-            # TODO: This moves the matplotlib window on top of other windows. Can this be fixed?
-            matplotlib.pyplot.pause(0.01)
+# class InteractivePlot:
+#     def __init__(self, lines: list[Line2D]):
+#         self.lines = lines
+#         self.data_x = []
+#         self.data_y = [[] for _ in lines]
+#
+#     def append(self, x: float, y: Iterable[float]):
+#         self.data_x.append(x)
+#         for i, val in enumerate(y):
+#             self.data_y[i].append(val)
+#
+#     def draw(self):
+#         # TODO: Only update on some ticks for performance? This makes the matplotlib window feel laggy.
+#         if len(self.data_x) % 6 == 0:
+#             for i, line in enumerate(self.lines):
+#                 line.set_xdata(self.data_x)
+#                 line.set_ydata(self.data_y[i])
+#             matplotlib.pyplot.gca().relim()
+#             matplotlib.pyplot.gca().autoscale_view()
+#             # TODO: This moves the matplotlib window on top of other windows. Can this be fixed?
+#             matplotlib.pyplot.pause(0.01)
 
 @dataclass
 class BlockExercise:
@@ -47,29 +47,31 @@ class BlockExercise:
     vx = 0.0
     F = math.nan
     pid_controller: PID
-    #plot: InteractivePlot
-    
+    cursor: Optional[Line2D]
+
     def tick(self, delta: float):
         try:
             control_return = self.pid_controller.control(delta, self.x)
         except Exception:
             raise exerciser.CodeRunError("Error running control method")
 
-        try:
-            self.F = np.clip(control_return, -1000, 1000)
-        except:
-            # TODO: More specific error?
-            raise exerciser.ValidationError("Control method did not return numbers")
+        if not isinstance(control_return, numbers.Real):
+            # TODO: Show actual returned value?
+            raise exerciser.ValidationError("Error simulating solution: Control method did not return a number")
+
+        self.F = np.clip(control_return, -1000, 1000)       
 
         self.t += delta
+        # TODO: Is silently ignoring NaN bad?
         if not math.isnan(self.F):
             self.vx += self.F * delta
         self.x += self.vx * delta
 
-        #self.plot.append(self.t, [self.x, self.vx, self.F])
-    
     def draw(self, screen: pygame.Surface):
-        exerciser.show_value("t", round(self.t, 2))
+        if self.cursor is not None:
+            self.cursor.set_xdata((self.t, self.t))
+
+        # exerciser.show_value("t", round(self.t, 2))
         exerciser.show_value("x", round(self.x, 2))
         exerciser.show_value("vx", round(self.vx, 2))
         exerciser.show_value("F", round(self.F, 2))
@@ -87,30 +89,30 @@ def run(create_pid: Callable[[], PID], exercise: int):
     #  but then we would have to reuse the presimulated state for the start of the simulation as well,
     #  because otherwise the PID controller would have incorrect initial state.
 
-    # TODO: Simulate the data for the plot ahead of time instead?
-
     matplotlib.pyplot.clf()
-    #matplotlib.pyplot.ion()
     hist_t = np.arange(0, 30, exerciser.DELTA)
     hist_x = []
     hist_vx = []
     hist_F = []
-    presimulate_exercise = BlockExercise(create_pid())
-    for _ in hist_t:
+    presimulate_exercise = BlockExercise(create_pid(), None)
+    for t in hist_t:
         try:
             presimulate_exercise.tick(exerciser.DELTA)
-        except Exception:
+        except (exerciser.CodeRunError, exerciser.ValidationError):
+            # TODO: Better wording?
+            matplotlib.pyplot.xlabel(f"Error simulating solution at t = {t:.2f}", color="red", loc='right')
             break
         hist_x.append(presimulate_exercise.x)
         hist_vx.append(presimulate_exercise.vx)
         hist_F.append(presimulate_exercise.F)
+    cursor = matplotlib.pyplot.axvline(x=0.0, lw=0.8)
     matplotlib.pyplot.plot(hist_t[:len(hist_x)], hist_x, label="x", color="red")
     matplotlib.pyplot.plot(hist_t[:len(hist_vx)], hist_vx, label="vx", color="green")
     matplotlib.pyplot.plot(hist_t[:len(hist_F)], hist_F, label="F", color="blue")
     matplotlib.pyplot.legend()
     matplotlib.pyplot.show(block=False)
 
-    exerciser.run_pygame(BlockExercise(create_pid()),)
+    exerciser.run_pygame(BlockExercise(create_pid(), cursor))
 
 if __name__ == '__main__':
     raise RuntimeError("Do not run this file directly. Instead call the run(..) function from this module in your solution.")

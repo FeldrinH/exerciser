@@ -8,8 +8,8 @@ class PID:
     def control(self, delta: float, x: float) -> float:
         vx = (x - self.last_x) / delta
         self.last_x = x
-        if abs(x) < 0.01 and abs(vx) < 0.01:
-            raise RuntimeError("Stabiilne")
+        # if abs(x) < 0.01 and abs(vx) < 0.01:
+        #    raise RuntimeError("Stabiilne")
         return -x * 1.5 - vx * 2.0
 
 if __name__ == '__main__':

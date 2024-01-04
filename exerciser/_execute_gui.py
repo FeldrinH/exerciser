@@ -59,7 +59,12 @@ def quit():
     global _running
     if _running:
         _running = False
-        matplotlib._pylab_helpers.Gcf.destroy_all()
+        try:
+            matplotlib._pylab_helpers.Gcf.destroy_all()
+        except Exception:
+            # Calling Gcf.destroy_all() while matplotlib is already closing tends to cause errors.
+            # It should be safe to ignore them to avoid spamming console.
+            pass
 
 def run_pygame(exercise: Exercise, error: Optional[BaseException] = None):
     global _exercise, _initialized, _running
@@ -153,7 +158,7 @@ def run_pygame(exercise: Exercise, error: Optional[BaseException] = None):
                 # Tick with fixed delta to ensure that simulation is as deterministic as possible
                 _exercise.tick(DELTA)
             except ValidationError as e:
-                show_message(f"Invalid solution: {e}", "red", None)
+                show_message(f"{e}", "red", None)
                 solution_module_valid = False
             except CodeRunError as e:
                 cause = e.__cause__ or e.__context__
@@ -163,14 +168,11 @@ def run_pygame(exercise: Exercise, error: Optional[BaseException] = None):
                     show_message(f"{e}: {type(cause).__name__}: {cause}", "red", None)
                     traceback.print_tb(cause.__traceback__)
                 solution_module_valid = False
-            except Exception as e:
-                show_message(f"Error while running exercise tick (this should not happen): {type(e).__name__}: {e}", "red", None)
-                traceback.print_exc()
-                solution_module_valid = False
 
         screen.fill("white")
 
-        _values_to_draw.append(f"FPS: {clock.get_fps():.2f}")
+        # TODO: Add some kind of toggle to enable FPS counter?
+        # _values_to_draw.append(f"FPS: {clock.get_fps():.2f}")
 
         if _exercise is not None:
             _exercise.draw(screen)
