@@ -125,7 +125,7 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
         should_reload = False
 
         # This separation of event.get and event.pump seems to make Pygame play nicely with Tk.
-        # Taken from https://stackoverflow.com/questions/58598836/pygame-event-get-fatal-python-error-pyeval-restorethread-null-tstate
+        # Taken from https://stackoverflow.com/questions/58598836/pygame-event-get-fatal-python-error-pyeval-restorethread-null-tstate.
         # Presumably this helps because it avoids interacting with whatever shared resource pumping events requires
         # when there are no events (most frames Pygame receives no events).
         events = pygame.event.get(pump=False)
@@ -201,8 +201,8 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
 
         pygame.display.flip()
 
-        # Yield time to matplotlib for processing events and updating window
-        # Note: Using this instead of matplotlib.pyplot.pause() avoid the matplotlib window moving to the front on every frame with Tk backend.
+        # Yield time to matplotlib for processing events and updating plots.
+        # Note: Using this instead of matplotlib.pyplot.pause() avoids the matplotlib window moving to the front on every frame when using Tk backend.
         # See https://stackoverflow.com/questions/45729092/make-interactive-matplotlib-window-not-pop-to-front-on-each-update-windows-7 for more info.
         # TODO: Tk main loop seems to ignore/block KeyboardInterrupt in some cases. Is there something that can be done to improve this?
         manager = matplotlib._pylab_helpers.Gcf.get_active()
