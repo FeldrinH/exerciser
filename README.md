@@ -10,7 +10,7 @@ python solution.py
 
 `solution.py` should be written by the student and should import the relevant exercise and call its run/simulate function with whatever arguments the specific exercise requires.
 
-Each exercise should define a function that calls `exerciser.run(exercise)`, where `exercise` is an object implementing [`exerciser.Exercise`](/exerciser/shared.py).
+Each exercise should define a function that calls `exerciser.run(exercise)`, where `exercise` is an object implementing [`exerciser.Exercise`](/exerciser/_shared.py).
 
 The solution file is automatically reloaded every time it changes. There may eventually be a public API to enable automatic reloading for other modules/files.
 
