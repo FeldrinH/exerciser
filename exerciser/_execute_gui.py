@@ -204,6 +204,7 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
         # Yield time to matplotlib for processing events and updating window
         # Note: Using this instead of matplotlib.pyplot.pause() avoid the matplotlib window moving to the front on every frame with Tk backend.
         # See https://stackoverflow.com/questions/45729092/make-interactive-matplotlib-window-not-pop-to-front-on-each-update-windows-7 for more info.
+        # TODO: Tk main loop seems to ignore/block KeyboardInterrupt in some cases. Is there something that can be done to improve this?
         manager = matplotlib._pylab_helpers.Gcf.get_active()
         if manager is not None:
             canvas = manager.canvas
