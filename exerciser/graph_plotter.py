@@ -1,6 +1,8 @@
 import numbers
 import pygame
 
+# TODO: Do we actually want to use this?
+# Currently the example simulates n seconds ahead of time and uses matplotlib instead
 class GraphPlotter:
     points: dict[str, list[numbers.Real]]
     limit: int

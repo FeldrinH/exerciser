@@ -1,7 +1,14 @@
+import math
+import exercise1
 
-def control(ball) -> tuple[float, float]:
-    return -ball.x * 0.8, -ball.y * 0.3
+class PID:
+    def __init__(self):
+        self.last_x = math.nan
+
+    def control(self, delta: float, x: float) -> float:
+        vx = (x - self.last_x) / delta
+        self.last_x = x
+        return -x * 1.5 - vx * 2
 
 if __name__ == '__main__':
-    import exercise1
-    exercise1.run(control)
+    exercise1.run(PID, exercise=1)

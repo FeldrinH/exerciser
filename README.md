@@ -20,7 +20,8 @@ Note: The API in general and the top-level public API specifically are very much
 
 ## Minimum Python version
 
-This library currently requires at least Python 3.10 (because it uses https://peps.python.org/pep-0604/).
+This libarary should support Python 3.8 and above.
 
-By removing some convenience features it should be possible to get down to 3.8.
 Going below 3.8 will degrade user experience, because exercise type checking depends heavily on https://peps.python.org/pep-0544/.
+
+TODO: Currently tested on 3.10. Validate that it actually works on 3.8.

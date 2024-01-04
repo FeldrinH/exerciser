@@ -1,25 +1,20 @@
 from abc import abstractmethod
-from typing import Any, ClassVar, Protocol
+from typing import Protocol
 import pygame
 
 class ValidationError(RuntimeError):
     pass
 
+class CodeRunError(RuntimeError):
+    pass
+
 class Exercise(Protocol):
-    name: ClassVar[str]
-    template: ClassVar[str]
-
-    def __init__(self):
-        ...
+    name: str
 
     @abstractmethod
-    def get_args(self) -> dict[str, Any]:
+    def tick(self, delta: float, /):
         raise NotImplementedError
     
     @abstractmethod
-    def tick(self, delta: float, control_return):
-        raise NotImplementedError
-    
-    @abstractmethod
-    def draw(self, screen: pygame.Surface):
+    def draw(self, screen: pygame.Surface, /):
         raise NotImplementedError
