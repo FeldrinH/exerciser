@@ -1,6 +1,6 @@
 # `exerciser`
 
-A library for control exercises based on pygame.
+A library for control exercises based on Pygame.
 
 ## Usage
 
