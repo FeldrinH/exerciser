@@ -14,30 +14,6 @@ class PID(Protocol):
     def control(self, delta: float, x: float) -> float:
         ...
 
-# This allows plotting with matplotlib in more or less real time.
-# TODO: Do we want to use this?
-# class InteractivePlot:
-#     def __init__(self, lines: list[Line2D]):
-#         self.lines = lines
-#         self.data_x = []
-#         self.data_y = [[] for _ in lines]
-#
-#     def append(self, x: float, y: Iterable[float]):
-#         self.data_x.append(x)
-#         for i, val in enumerate(y):
-#             self.data_y[i].append(val)
-#
-#     def draw(self):
-#         # TODO: Only update on some ticks for performance? This makes the matplotlib window feel laggy.
-#         if len(self.data_x) % 6 == 0:
-#             for i, line in enumerate(self.lines):
-#                 line.set_xdata(self.data_x)
-#                 line.set_ydata(self.data_y[i])
-#             matplotlib.pyplot.gca().relim()
-#             matplotlib.pyplot.gca().autoscale_view()
-#             # TODO: This moves the matplotlib window on top of other windows. Can this be fixed?
-#             matplotlib.pyplot.pause(0.01)
-
 @dataclass
 class BlockExercise:
     name = "Lab 1 - PID"
