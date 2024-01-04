@@ -81,10 +81,6 @@ class BlockExercise:
         exerciser.pygame.draw_arrow(screen, "green3", center_pos, (self.vx, 0), 2)
         if not math.isnan(self.F):
             exerciser.pygame.draw_arrow(screen, "blue", center_pos, (self.F, 0), 2)
-        
-        # Yield time to matplotlib for processing events and updating window
-        #self.plot.draw()
-        matplotlib.pyplot.pause(exerciser.DELTA * 0.2)
 
 def run(create_pid: Callable[[], PID], exercise: int):
     # TODO: It would probably be more student-friendly to directly take in a PIDController,
@@ -101,17 +97,20 @@ def run(create_pid: Callable[[], PID], exercise: int):
     hist_F = []
     presimulate_exercise = BlockExercise(create_pid())
     for _ in hist_t:
-        presimulate_exercise.tick(exerciser.DELTA)
+        try:
+            presimulate_exercise.tick(exerciser.DELTA)
+        except Exception:
+            break
         hist_x.append(presimulate_exercise.x)
         hist_vx.append(presimulate_exercise.vx)
         hist_F.append(presimulate_exercise.F)
-    matplotlib.pyplot.plot(hist_t, hist_x, label="x", color="red")
-    matplotlib.pyplot.plot(hist_t, hist_vx, label="vx", color="green")
-    matplotlib.pyplot.plot(hist_t, hist_F, label="F", color="blue")
+    matplotlib.pyplot.plot(hist_t[:len(hist_x)], hist_x, label="x", color="red")
+    matplotlib.pyplot.plot(hist_t[:len(hist_vx)], hist_vx, label="vx", color="green")
+    matplotlib.pyplot.plot(hist_t[:len(hist_F)], hist_F, label="F", color="blue")
     matplotlib.pyplot.legend()
     matplotlib.pyplot.show(block=False)
 
-    exerciser.run(BlockExercise(create_pid()))
+    exerciser.run_pygame(BlockExercise(create_pid()),)
 
 if __name__ == '__main__':
     raise RuntimeError("Do not run this file directly. Instead call the run(..) function from this module in your solution.")
