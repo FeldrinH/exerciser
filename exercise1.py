@@ -84,7 +84,7 @@ class BlockExercise:
         if not math.isnan(self.F):
             exerciser.pygame.draw_arrow(screen, "blue", center_pos, (self.F, 0), 2)
 
-def run(create_pid: Callable[[], PID], exercise: int):
+def simulate(create_pid: Callable[[], PID], exercise: int):
     # TODO: It would probably be more student-friendly to directly take in a PIDController,
     #  but then we would have to reuse the presimulated state for the start of the simulation as well,
     #  because otherwise the PID controller would have incorrect initial state.
@@ -112,7 +112,7 @@ def run(create_pid: Callable[[], PID], exercise: int):
     matplotlib.pyplot.legend()
     matplotlib.pyplot.show(block=False)
 
-    exerciser.run_pygame(BlockExercise(create_pid(), cursor))
+    exerciser.run(BlockExercise(create_pid(), cursor))
 
 if __name__ == '__main__':
-    raise RuntimeError("Do not run this file directly. Instead call the run(..) function from this module in your solution.")
+    raise RuntimeError("Do not run this file directly. Instead call the simulate(..) function from this module in your solution.")

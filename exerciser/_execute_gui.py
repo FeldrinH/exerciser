@@ -66,7 +66,15 @@ def quit():
             # It should be safe to ignore them to avoid spamming console.
             pass
 
-def run_pygame(exercise: Exercise, error: Optional[BaseException] = None):
+def run(exercise: Exercise, error: Optional[BaseException] = None):
+    """
+    Runs provided `exercise` in a Pygame window. If `error` is provided behaves as if the error was raised by the exercise on the first tick.
+    Watches main module source file for changes and reloads it on change.
+
+    Yields time to matplotlib windows for processing events and updating plots, if any exist.
+    This allows it to run at the same time as matplotlib without issues.
+    """
+
     global _exercise, _initialized, _running
 
     if error is None:
@@ -198,6 +206,7 @@ def run_pygame(exercise: Exercise, error: Optional[BaseException] = None):
         # See https://stackoverflow.com/questions/45729092/make-interactive-matplotlib-window-not-pop-to-front-on-each-update-windows-7 for more info.
         manager = matplotlib._pylab_helpers.Gcf.get_active()
         if manager is not None:
+            print("Yielding time to matplotlib")
             canvas = manager.canvas
             if canvas.figure.stale:
                 canvas.draw_idle()

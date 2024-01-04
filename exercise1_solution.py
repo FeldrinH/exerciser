@@ -13,4 +13,4 @@ class PID:
         return -x * 1.5 - vx * 2.0
 
 if __name__ == '__main__':
-    exercise1.run(PID, exercise=1)
+    exercise1.simulate(PID, exercise=1)
