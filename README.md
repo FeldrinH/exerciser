@@ -12,6 +12,8 @@ python solution.py
 
 Each exercise should define a function that calls `exerciser.run(exercise)`, where `exercise` is an object implementing [`exerciser.Exercise`](/exerciser/_shared.py).
 
+TODO: Describe error handling and specialized error types.
+
 The solution file is automatically reloaded every time it changes. There may eventually be a public API to enable automatic reloading for other modules/files.
 
 Note: The API in general and the top-level public API specifically are very much experimental and subject to change. See [`/exercise1.py`](/exercise1.py) and [`/exercise1_solution.py`](/exercise1_solution.py) for an up to date example.
