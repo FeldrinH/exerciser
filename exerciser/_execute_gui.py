@@ -94,7 +94,7 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
         #
         # TODO: This issue may be Windows specific.
         # A comment in an old version of the TkAgg backend seems to imply this: https://github.com/matplotlib/matplotlib/blob/68f86b37bb294913513b7ee5106a5aaa1558969e/lib/matplotlib/backends/backend_tkagg.py#L597-L600.
-        tk_pygame_compat_warning = 'matplotlib is using the Tk backend. Tk has compatibility issues with Pygame. Using a different matplotlib backend is recommended.'
+        tk_pygame_compat_warning = 'matplotlib is using the Tk backend. Tk has compatibility issues with Pygame that may cause Python to crash. Using a different matplotlib backend is recommended.'
         warnings.warn(tk_pygame_compat_warning, RuntimeWarning)
 
     if error is None:
