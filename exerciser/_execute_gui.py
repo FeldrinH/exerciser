@@ -82,8 +82,8 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
     global _exercise, _initialized, _running
 
     if matplotlib.get_backend().casefold() == 'tkagg':
-        # Running matplotlib with Tk backend and Pygame together occasionally causes Python to close with the error message `Fatal Python error: PyEval_RestoreThread: NULL tstate`.
-        # Note: The Tk backend is in general kind of flaky, having issues handling KeyboardInterrupt and moving the window in front of other windows on every reload.
+        # Running matplotlib with Tk backend and Pygame together occasionally causes Python to crash with the error message `Fatal Python error: PyEval_RestoreThread: NULL tstate`.
+        # The Tk backend is also kind of flaky in general, having issues handling KeyboardInterrupt and moving the window in front of other windows on every reload.
         # Even if the Tk and Pygame crashing gets resolved it is probably a good idea to avoid the Tk backend.
         # 
         # TODO: What is the actual cause of this issue?
