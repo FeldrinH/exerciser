@@ -24,7 +24,7 @@ class BlockExercise:
     vx = 0.0
     F = math.nan
     pid_controller: PID
-    cursor: Optional[Line2D]
+    cursor: Optional[Line2D] = None
 
     def tick(self, delta: float):
         try:
@@ -46,6 +46,7 @@ class BlockExercise:
 
     def draw(self, screen: pygame.Surface):
         if self.cursor is not None:
+            # TODO: Moving the cursor in real time seems to cause high CPU usage. Is there a way to improve this?
             self.cursor.set_xdata((self.t, self.t))
 
         # exerciser.show_value("t", round(self.t, 2))
@@ -60,18 +61,20 @@ class BlockExercise:
         exerciser.pygame.draw_arrow(screen, "green3", center_pos, (self.vx, 0), 2)
         if not math.isnan(self.F):
             exerciser.pygame.draw_arrow(screen, "blue", center_pos, (self.F, 0), 2)
+    
+    def cleanup(self):
+        matplotlib.pyplot.clf()
 
 def simulate(pid: PID, exercise: int):
     # TODO: Is there a meaningful risk that a student will create a PID class that breaks with deepcopy?
     # TODO: The current presimulation approach is convenient, but assumes that the PID controller is deterministic, which is not guaranteed.
     # TODO: The current presimulation approach means that any console output and other side effects in the first 30 seconds will happen twice.
 
-    matplotlib.pyplot.clf()
     hist_t = np.arange(0, 30, exerciser.DELTA)
     hist_x = []
     hist_vx = []
     hist_F = []
-    presimulate_exercise = BlockExercise(copy.deepcopy(pid), None)
+    presimulate_exercise = BlockExercise(copy.deepcopy(pid))
     for t in hist_t:
         try:
             presimulate_exercise.tick(exerciser.DELTA)

@@ -1,4 +1,5 @@
 import os
+import warnings
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 from typing import Any, Final, Optional
 import importlib.util
@@ -23,7 +24,10 @@ class ErrorProxyExercise:
         raise self.error
 
     def draw(self, surface):
-        return self.exercise.draw(surface)
+        self.exercise.draw(surface)
+    
+    def cleanup(self):
+        self.exercise.cleanup()
 
 def _prepare_module_for_reload(module: ModuleType):
     # TODO: This creates a spec if a spec is missing, which is never done in the documentation. Is this somehow unsound?
@@ -77,6 +81,22 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
 
     global _exercise, _initialized, _running
 
+    if matplotlib.get_backend().casefold() == 'tkagg':
+        # Running matplotlib with Tk backend and Pygame together occasionally causes Python to close with the error message `Fatal Python error: PyEval_RestoreThread: NULL tstate`.
+        # Note: The Tk backend is in general kind of flaky, having issues handling KeyboardInterrupt and moving the window in front of other windows on every reload.
+        # Even if the Tk and Pygame crashing gets resolved it is probably a good idea to avoid the Tk backend.
+        # 
+        # TODO: What is the actual cause of this issue?
+        # The only reference to it I could find was https://stackoverflow.com/questions/58598836/pygame-event-get-fatal-python-error-pyeval-restorethread-null-tstate,
+        # which only speculates about the cause and provides no sources for anything.
+        # Note: The workarond in that post works, but causes Pygame to freeze if the Tk main loop is not running.
+        # Reliably detecting if the Tk main loop is running seems to be impossible without very dirty hacks, so this workaround is not viable for our use case. 
+        #
+        # TODO: This issue may be Windows specific.
+        # A comment in an old version of the TkAgg backend seems to imply this: https://github.com/matplotlib/matplotlib/blob/68f86b37bb294913513b7ee5106a5aaa1558969e/lib/matplotlib/backends/backend_tkagg.py#L597-L600.
+        tk_pygame_compat_warning = 'matplotlib is using the Tk backend. Tk has compatibility issues with Pygame. Using a different matplotlib backend is recommended.'
+        warnings.warn(tk_pygame_compat_warning, RuntimeWarning)
+
     if error is None:
         _exercise = exercise
     else:
@@ -90,7 +110,6 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
     for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():
         manager.canvas.mpl_connect('close_event', lambda _: quit())
     
-    # TODO: Maybe pass in the module instead?
     # TODO: Python importlib docs recommend against reloading __main__. Is reloading __main__ somehow unsound?
     solution_module = sys.modules['__main__']
     _prepare_module_for_reload(solution_module)
@@ -117,6 +136,7 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
     screen = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
     pygame.display.set_caption(f"{_exercise.name} / {Path(solution_file).name}")
     clock = pygame.time.Clock()
+    tick = 0
     variables_font = pygame.font.SysFont('Arial', 20)
 
     last_reload_check = pygame.time.get_ticks()
@@ -124,19 +144,12 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
     while _running:
         should_reload = False
 
-        # This separation of event.get and event.pump seems to make Pygame play nicely with Tk.
-        # Taken from https://stackoverflow.com/questions/58598836/pygame-event-get-fatal-python-error-pyeval-restorethread-null-tstate.
-        # Presumably this helps because it avoids interacting with whatever shared resource pumping events requires
-        # when there are no events (most frames Pygame receives no events).
-        events = pygame.event.get(pump=False)
-        if events:
-            pygame.event.pump()
-            for event in events:
-                if event.type == pygame.QUIT:
-                    _running = False
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_r:
-                        should_reload = True
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                _running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    should_reload = True
         
         # TODO: Optimize this?
         if pygame.time.get_ticks() - last_reload_check >= 1000:
@@ -148,16 +161,18 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
         
         if should_reload:
             should_reload = False
+            if _exercise is not None:
+                _exercise.cleanup()
+            _exercise = None
             try:
-                _exercise = None
                 _reload_module(solution_module)
-                show_message("Reloaded solution", "blue", 2000)
             except Exception as e:
                 show_message(f"Error reloading solution: {type(e).__name__}: {e}", "red", None)
                 traceback.print_exc()
             else:
+                show_message("Reloaded solution", "blue", 2000)
                 solution_module_valid = True
-                if not _exercise:
+                if _exercise is None:
                     # TODO: Better error message?
                     show_message(f"Reloaded solution did not call the required method to provide a solution", "red", None)
 
@@ -202,16 +217,18 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
         pygame.display.flip()
 
         # Yield time to matplotlib for processing events and updating plots.
-        # Note: Using this instead of matplotlib.pyplot.pause() avoids the matplotlib window moving to the front on every frame when using Tk backend.
-        # See https://stackoverflow.com/questions/45729092/make-interactive-matplotlib-window-not-pop-to-front-on-each-update-windows-7 for more info.
-        # TODO: Tk main loop seems to ignore/block KeyboardInterrupt in some cases. Is there something that can be done to improve this?
+        # Note: Using this instead of matplotlib.pyplot.pause() avoids the matplotlib window showing up when matplotlib is loaded but not currently in use.
+        # Note: Redrawing only happens every 3 frames (giving matplotlib an effective max FPS of 20), because redrawing the plot is very CPU intensive.
+        # TODO: Is there a better way to optimize matplotlib redrawing?
         manager = matplotlib._pylab_helpers.Gcf.get_active()
         if manager is not None:
             canvas = manager.canvas
-            if canvas.figure.stale:
-                canvas.draw_idle()
+            if tick % 3 == 0:
+                if canvas.figure.stale:
+                    canvas.draw_idle()
             canvas.start_event_loop(DELTA * 0.2)
 
         clock.tick(TPS)
+        tick += 1
 
     pygame.quit()
