@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "exerciser"
+version = "0.1.0"
+authors = [
+    { name="Juhan Oskar Hennoste (FeldrinH)", email="fhandswitch@gmail.com" },
+]
+description = "A library for control exercises based on Pygame"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Operating System :: OS Independent",
+]
+dependencies=[
+    "pygame==2.*",
+    "matplotlib==3.*",
+]
+
+[project.urls]
+Homepage = "https://github.com/FeldrinH/exerciser"
+Issues = "https://github.com/FeldrinH/exerciser/issues"

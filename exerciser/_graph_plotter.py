@@ -1,5 +1,5 @@
 import numbers
-from typing import Iterable
+from typing import Iterable, List, Dict
 import matplotlib.pyplot
 from matplotlib.lines import Line2D
 import pygame
@@ -7,7 +7,7 @@ import pygame
 # TODO: Do we actually want to use this?
 # Currently the example simulates n seconds ahead of time and uses matplotlib instead
 class GraphPlotter:
-    points: dict[str, list[numbers.Real]]
+    points: Dict[str, List[numbers.Real]]
     limit: int
 
     def __init__(self, limit: int):
@@ -38,7 +38,7 @@ class GraphPlotter:
 # This allows plotting with matplotlib in more or less real time.
 # TODO: Do we want to use this?
 class InteractivePlot:
-    def __init__(self, lines: list[Line2D]):
+    def __init__(self, lines: List[Line2D]):
         self.lines = lines
         self.data_x = []
         self.data_y = [[] for _ in lines]

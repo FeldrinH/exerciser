@@ -1,7 +1,7 @@
 import os
 import warnings
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
-from typing import Any, Final, Optional
+from typing import Any, Final, List, Optional
 import importlib.util
 from pathlib import Path
 import sys
@@ -54,7 +54,7 @@ def _reload_module(module: ModuleType):
 _exercise: Optional[Exercise] = None
 _initialized = False
 _running = True
-_values_to_draw: list[str] = []
+_values_to_draw: List[str] = []
 
 def show_value(label: str, value: Any):
     _values_to_draw.append(f"{label} = {value}")
