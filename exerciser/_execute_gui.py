@@ -28,7 +28,8 @@ class ErrorProxyExercise:
         self.exercise.draw(surface)
     
     def cleanup(self):
-        self.exercise.cleanup()
+        if hasattr(self.exercise, 'cleanup'):
+            self.exercise.cleanup() # type: ignore
 
 def _prepare_module_for_reload(module: ModuleType):
     # TODO: This creates a spec if a spec is missing, which is never done in the documentation. Is this somehow unsound?
@@ -227,7 +228,8 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
         if should_reload:
             should_reload = False
             if _exercise is not None:
-                _exercise.cleanup()
+                if hasattr(_exercise, 'cleanup'):
+                    _exercise.cleanup() # type: ignore
             _exercise = None
             # Automatically clear all matplotlib figures
             for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():

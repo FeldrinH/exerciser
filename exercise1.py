@@ -63,9 +63,6 @@ class BlockExercise:
         exerciser.pygame.draw_arrow(screen, "green3", center_pos, (self.vx, 0), 2)
         if not math.isnan(self.F):
             exerciser.pygame.draw_arrow(screen, "blue", center_pos, (self.F, 0), 2)
-    
-    def cleanup(self):
-        pass
 
 _initialized = False
 
