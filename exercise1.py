@@ -2,7 +2,9 @@ import copy
 from dataclasses import dataclass
 import math
 import numbers
+import random
 from typing import Optional, Protocol
+from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 import matplotlib.pyplot
 import exerciser
@@ -24,6 +26,7 @@ class BlockExercise:
     vx = 0.0
     F = math.nan
     pid_controller: PID
+    fig: Optional[Figure] = None
     cursor: Optional[Line2D] = None
 
     def tick(self, delta: float):
@@ -63,12 +66,20 @@ class BlockExercise:
             exerciser.pygame.draw_arrow(screen, "blue", center_pos, (self.F, 0), 2)
     
     def cleanup(self):
-        matplotlib.pyplot.clf()
+        if self.fig is not None:
+            self.fig.clear()
+
+_initialized = False
 
 def simulate(pid: PID, exercise: int):
     # TODO: Is there a meaningful risk that a student will create a PID class that breaks with deepcopy?
     # TODO: The current presimulation approach is convenient, but assumes that the PID controller is deterministic, which is not guaranteed.
     # TODO: The current presimulation approach means that any console output and other side effects in the first 30 seconds will happen twice.
+
+    global _initialized
+
+    fig = matplotlib.pyplot.figure(num=BlockExercise.name)
+    ax = fig.gca()
 
     hist_t = np.arange(0, 30, exerciser.DELTA)
     hist_x = []
@@ -80,19 +91,23 @@ def simulate(pid: PID, exercise: int):
             presimulate_exercise.tick(exerciser.DELTA)
         except (exerciser.CodeRunError, exerciser.ValidationError):
             # TODO: Better wording?
-            matplotlib.pyplot.xlabel(f"Error simulating solution at t = {t:.2f}", color="red", loc='right')
+            ax.set_xlabel(f"Error simulating solution at t = {t:.2f}", color="red", loc='right')
             break
         hist_x.append(presimulate_exercise.x)
         hist_vx.append(presimulate_exercise.vx)
         hist_F.append(presimulate_exercise.F)
-    cursor = matplotlib.pyplot.axvline(x=0.0, lw=0.8)
-    matplotlib.pyplot.plot(hist_t[:len(hist_x)], hist_x, label="x", color="red")
-    matplotlib.pyplot.plot(hist_t[:len(hist_vx)], hist_vx, label="vx", color="green")
-    matplotlib.pyplot.plot(hist_t[:len(hist_F)], hist_F, label="F", color="blue")
-    matplotlib.pyplot.legend()
-    matplotlib.pyplot.show(block=False)
+    cursor = ax.axvline(x=0.0, lw=0.8)
+    ax.plot(hist_t[:len(hist_x)], hist_x, label="x", color="red")
+    ax.plot(hist_t[:len(hist_vx)], hist_vx, label="vx", color="green")
+    ax.plot(hist_t[:len(hist_F)], hist_F, label="F", color="blue")
+    ax.legend()
+    
+    if not _initialized:
+        _initialized = True
+        # Calling show only once avoids stealing focus and other unnecessary indicators on reload.
+        matplotlib.pyplot.show(block=False)
 
-    exerciser.run(BlockExercise(pid, cursor))
+    exerciser.run(BlockExercise(pid, fig, cursor))
 
 if __name__ == '__main__':
     raise RuntimeError("Do not run this file directly. Instead call the simulate(..) function from this module in your solution.")
