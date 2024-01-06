@@ -24,4 +24,5 @@ This libarary should support Python 3.8 and above.
 
 Going below 3.8 will degrade user experience, because exercise type checking depends heavily on https://peps.python.org/pep-0544/.
 
-TODO: Currently tested on 3.10. Validate that it actually works on 3.8.
+Python 3.8 compatibility has been checked using static analysis tool [vermin](https://github.com/netromdk/vermin).
+TODO: Currently tested on 3.10. Validate that it actually runs on 3.8.
