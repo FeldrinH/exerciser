@@ -26,7 +26,6 @@ class BlockExercise:
     vx = 0.0
     F = math.nan
     pid_controller: PID
-    fig: Optional[Figure] = None
     cursor: Optional[Line2D] = None
 
     def tick(self, delta: float):
@@ -66,8 +65,7 @@ class BlockExercise:
             exerciser.pygame.draw_arrow(screen, "blue", center_pos, (self.F, 0), 2)
     
     def cleanup(self):
-        if self.fig is not None:
-            self.fig.clear()
+        pass
 
 _initialized = False
 
@@ -107,7 +105,7 @@ def simulate(pid: PID, exercise: int):
         # Calling show only once avoids stealing focus and other unnecessary indicators on reload.
         matplotlib.pyplot.show(block=False)
 
-    exerciser.run(BlockExercise(pid, fig, cursor))
+    exerciser.run(BlockExercise(pid, cursor))
 
 if __name__ == '__main__':
     raise RuntimeError("Do not run this file directly. Instead call the simulate(..) function from this module in your solution.")

@@ -73,8 +73,7 @@ def quit():
             # It should be safe to ignore them to avoid spamming console.
             pass
 
-# TODO: Maybe cleanup should be non-optional? You could explicitly pass in a no-op if required.
-def run_idle(cleanup: Optional[Callable[[], Any]]):
+def run_idle(cleanup: Optional[Callable[[], Any]] = None):
     """
     Watches main module source file for changes and reloads it on change.
     If `cleanup` is provided, it will be called before reload.
@@ -230,6 +229,9 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
             if _exercise is not None:
                 _exercise.cleanup()
             _exercise = None
+            # Automatically clear all matplotlib figures
+            for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():
+                manager.canvas.figure.clear()
             try:
                 _reload_module(solution_module)
             except Exception as e:
