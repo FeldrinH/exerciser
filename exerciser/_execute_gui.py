@@ -1,7 +1,8 @@
 import os
+import time
 import warnings
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
-from typing import Any, Final, List, Optional
+from typing import Any, Callable, Final, List, Optional
 import importlib.util
 from pathlib import Path
 import sys
@@ -52,10 +53,12 @@ def _reload_module(module: ModuleType):
     spec.loader.exec_module(module)
 
 _exercise: Optional[Exercise] = None
+_cleanup: Optional[Callable[[], Any]] = None
 _initialized = False
 _running = True
 _values_to_draw: List[str] = []
 
+# TODO: This only shows something if a Pygame window is open. Move this to pygame module?
 def show_value(label: str, value: Any):
     _values_to_draw.append(f"{label} = {value}")
 
@@ -69,6 +72,69 @@ def quit():
             # Calling Gcf.destroy_all() while matplotlib is already closing tends to cause errors.
             # It should be safe to ignore them to avoid spamming console.
             pass
+
+# TODO: Maybe cleanup should be non-optional? You could explicitly pass in a no-op if required.
+def run_idle(cleanup: Optional[Callable[[], Any]]):
+    """
+    Watches main module source file for changes and reloads it on change.
+    If `cleanup` is provided, it will be called before reload.
+
+    Yields time to matplotlib windows for processing events and updating plots, if any exist.
+    This allows it to run at the same time as matplotlib without issues.
+    """
+
+    global _cleanup, _initialized, _running
+
+    _cleanup = cleanup
+    del cleanup
+    if _initialized:
+        return
+    _initialized = True
+
+    # Automatically exit if any matplotlib window is closed.
+    for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():
+        manager.canvas.mpl_connect('close_event', lambda _: quit())
+    
+    # TODO: Python importlib docs recommend against reloading __main__. Is reloading __main__ somehow unsound?
+    solution_module = sys.modules['__main__']
+    _prepare_module_for_reload(solution_module)
+
+    solution_file = solution_module.__file__
+    assert solution_file
+    last_mtime = os.stat(solution_file).st_mtime
+
+    while _running:
+        should_reload = False
+        
+        # TODO: Optimize this?
+        new_mtime = os.stat(solution_file).st_mtime
+        if new_mtime != last_mtime:
+            last_mtime = new_mtime
+            should_reload = True
+        
+        if should_reload:
+            should_reload = False
+            if _cleanup is not None:
+                _cleanup()
+            _cleanup = None
+            try:
+                _reload_module(solution_module)
+            except Exception as e:
+                print(f"Error reloading solution: {type(e).__name__}: {e}")
+                traceback.print_exc()
+            else:
+                print("Reloaded solution")
+
+        # Yield time to matplotlib for processing events and updating plots.
+        for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():
+            canvas = manager.canvas
+            if canvas.figure.stale:
+                canvas.draw_idle()
+        manager = matplotlib._pylab_helpers.Gcf.get_active()
+        if manager is not None:
+            manager.canvas.start_event_loop(1.0)
+        else:
+            time.sleep(1.0)
 
 def run(exercise: Exercise, error: Optional[BaseException] = None):
     """
@@ -220,13 +286,14 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
         # Note: Using this instead of matplotlib.pyplot.pause() avoids the matplotlib window showing up when matplotlib is loaded but not currently in use.
         # Note: Redrawing only happens every 3 frames (giving matplotlib an effective max FPS of 20), because redrawing the plot is very CPU intensive.
         # TODO: Is there a better way to optimize matplotlib redrawing?
-        manager = matplotlib._pylab_helpers.Gcf.get_active()
-        if manager is not None:
-            canvas = manager.canvas
-            if tick % 3 == 0:
+        if tick % 3 == 0:
+            for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():
+                canvas = manager.canvas
                 if canvas.figure.stale:
                     canvas.draw_idle()
-            canvas.start_event_loop(DELTA * 0.2)
+        manager = matplotlib._pylab_helpers.Gcf.get_active()
+        if manager is not None:
+            manager.canvas.start_event_loop(DELTA * 0.2)
 
         clock.tick(TPS)
         tick += 1
