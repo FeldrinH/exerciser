@@ -209,6 +209,8 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
 
     last_reload_check = pygame.time.get_ticks()
 
+    show_fps = False
+
     while _running:
         should_reload = False
 
@@ -218,6 +220,8 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
                     should_reload = True
+                elif event.key == pygame.K_F1:
+                    show_fps = not show_fps
         
         # TODO: Optimize this?
         if pygame.time.get_ticks() - last_reload_check >= 1000:
@@ -265,8 +269,8 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
 
         screen.fill("white")
 
-        # TODO: Add some kind of toggle to enable FPS counter?
-        _values_to_draw.append(f"FPS: {clock.get_fps():.2f}")
+        if show_fps:
+            _values_to_draw.append(f"FPS: {clock.get_fps():.2f}")
 
         if _exercise is not None:
             _exercise.draw(screen)
