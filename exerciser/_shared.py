@@ -8,6 +8,8 @@ class ValidationError(RuntimeError):
 class CodeRunError(RuntimeError):
     pass
 
+# Note: Even though Exercise is structurally typed, it is recommended to explicitly subclass Exercise
+# for better type hints and default implementations of methods.
 class Exercise(Protocol):
     name: str
 
@@ -19,8 +21,7 @@ class Exercise(Protocol):
     def draw(self, screen: pygame.Surface, /) -> None:
         raise NotImplementedError
     
-    # The cleanup method is optional, but Python does not allow this to be represented with protocols.
+    # The cleanup method should be optional, but Python does not allow this to be fully represented with protocols.
     # TODO: Revisit this if/when https://github.com/python/typing/issues/601 gets resolved.
-    # If the cleanup method exists, it should conform to this signature:
-    # def cleanup(self, /) -> None:
-    #    ...
+    def cleanup(self, /) -> None:
+        pass

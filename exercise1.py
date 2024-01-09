@@ -2,9 +2,7 @@ import copy
 from dataclasses import dataclass
 import math
 import numbers
-import random
 from typing import Optional, Protocol
-from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 import matplotlib.pyplot
 import exerciser
@@ -18,13 +16,14 @@ class PID(Protocol):
         ...
 
 @dataclass
-class BlockExercise:
+class BlockExercise(exerciser.Exercise):
     name = "Lab 1 - PID"
 
     t = 0.0
     x = 100.0
     vx = 0.0
     F = math.nan
+
     pid_controller: PID
     cursor: Optional[Line2D] = None
 

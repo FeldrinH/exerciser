@@ -28,8 +28,7 @@ class ErrorProxyExercise:
         self.exercise.draw(surface)
     
     def cleanup(self):
-        if hasattr(self.exercise, 'cleanup'):
-            self.exercise.cleanup() # type: ignore
+        self.exercise.cleanup()
 
 def _prepare_module_for_reload(module: ModuleType):
     # TODO: This creates a spec if a spec is missing, which is never done in the documentation. Is this somehow unsound?
@@ -74,7 +73,7 @@ def quit():
             # It should be safe to ignore them to avoid spamming console.
             pass
 
-def run_idle(cleanup: Optional[Callable[[], Any]] = None):
+def run_idle(cleanup: Optional[Callable[[], None]] = None):
     """
     Watches main module source file for changes and reloads it on change.
     If `cleanup` is provided, it will be called before reload.
@@ -117,6 +116,9 @@ def run_idle(cleanup: Optional[Callable[[], Any]] = None):
             if _cleanup is not None:
                 _cleanup()
             _cleanup = None
+            # Automatically clear all matplotlib figures
+            for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():
+                manager.canvas.figure.clear()
             try:
                 _reload_module(solution_module)
             except Exception as e:
@@ -228,8 +230,7 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
         if should_reload:
             should_reload = False
             if _exercise is not None:
-                if hasattr(_exercise, 'cleanup'):
-                    _exercise.cleanup() # type: ignore
+                _exercise.cleanup()
             _exercise = None
             # Automatically clear all matplotlib figures
             for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():
@@ -265,7 +266,7 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
         screen.fill("white")
 
         # TODO: Add some kind of toggle to enable FPS counter?
-        # _values_to_draw.append(f"FPS: {clock.get_fps():.2f}")
+        _values_to_draw.append(f"FPS: {clock.get_fps():.2f}")
 
         if _exercise is not None:
             _exercise.draw(screen)
