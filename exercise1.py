@@ -24,12 +24,12 @@ class BlockExercise(exerciser.Exercise):
     vx = 0.0
     F = math.nan
 
-    pid_controller: PID
+    pid: PID
     cursor: Optional[Line2D] = None
 
     def tick(self, delta: float):
         try:
-            control_return = self.pid_controller.control(delta, self.x)
+            control_return = self.pid.control(delta, self.x)
         except Exception:
             raise exerciser.CodeRunError("Error running control method")
 
@@ -37,7 +37,7 @@ class BlockExercise(exerciser.Exercise):
             # TODO: Show actual returned value?
             raise exerciser.ValidationError("Error simulating solution: Control method did not return a number")
 
-        self.F = np.clip(control_return, -1000, 1000)       
+        self.F = np.clip(control_return, -100, 100)       
 
         self.t += delta
         # TODO: Is silently ignoring NaN bad?
