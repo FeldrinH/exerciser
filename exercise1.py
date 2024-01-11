@@ -1,9 +1,8 @@
 import copy
-from dataclasses import dataclass
 import math
 import numbers
-from typing import Optional, Protocol
-from matplotlib.lines import Line2D
+import random
+from typing import NamedTuple, Protocol
 import matplotlib.pyplot
 import exerciser
 import pygame
@@ -15,23 +14,39 @@ class PID(Protocol):
     def control(self, delta: float, x: float) -> float:
         ...
 
-@dataclass
+class Params(NamedTuple):
+    x: float
+    force: float
+
+def _to_params(exercise: int | Params) -> Params:
+    if isinstance(exercise, Params):
+        return exercise
+    elif exercise == 1:
+        return Params(100, 0)
+    elif exercise == 2:
+        return Params(100, 30)
+    elif exercise == 3:
+        return Params(random.uniform(-150, 150), random.uniform(-40, 40))
+    else:
+        raise exerciser.ValidationError(f"Unknown exercise number: {exercise}")
+
 class BlockExercise(exerciser.Exercise):
     name = "Lab 1 - PID"
 
     t = 0.0
-    x = 100.0
+    x: float
     vx = 0.0
     F = math.nan
 
-    pid: PID
-    cursor: Optional[Line2D] = None
+    def __init__(self, pid: PID, exercise: int | Params):
+        self.x, self._env_F = _to_params(exercise)
+        self.pid = pid
 
     def tick(self, delta: float):
         try:
             control_return = self.pid.control(delta, self.x)
-        except Exception:
-            raise exerciser.CodeRunError("Error running control method")
+        except Exception as err:
+            raise exerciser.CodeRunError("Error running control method") from err
 
         if not isinstance(control_return, numbers.Real):
             # TODO: Show actual returned value?
@@ -41,16 +56,15 @@ class BlockExercise(exerciser.Exercise):
 
         self.t += delta
         # TODO: Is silently ignoring NaN bad?
-        if not math.isnan(self.F):
-            self.vx += self.F * delta
+        self.vx += ((0 if math.isnan(self.F) else self.F) + self._env_F) * delta
         self.x += self.vx * delta
 
     def draw(self, screen: pygame.Surface):
-        if self.cursor is not None:
-            # TODO: Moving the cursor in real time seems to cause high CPU usage. Is there a way to improve this?
-            self.cursor.set_xdata((self.t, self.t))
+        # TODO: Moving the cursor in real time seems to cause high CPU usage. Is there a way to improve this?
+        # if self.cursor is not None:
+        #     self.cursor.set_xdata((self.t, self.t))
 
-        # exerciser.show_value("t", round(self.t, 2))
+        exerciser.show_value("t", round(self.t, 2))
         exerciser.show_value("x", round(self.x, 2))
         exerciser.show_value("vx", round(self.vx, 2))
         exerciser.show_value("F", round(self.F, 2))
@@ -59,27 +73,29 @@ class BlockExercise(exerciser.Exercise):
 
         center_pos = (self.x + screen.get_width() / 2, screen.get_height() / 2)
         pygame.draw.rect(screen, "red", ((center_pos[0] - 10, center_pos[1] - 10), (20, 20)))
+        exerciser.pygame.draw_arrow(screen, "purple", center_pos, (self._env_F, 0), 1)
         exerciser.pygame.draw_arrow(screen, "green3", center_pos, (self.vx, 0), 2)
         if not math.isnan(self.F):
             exerciser.pygame.draw_arrow(screen, "blue", center_pos, (self.F, 0), 2)
 
-_initialized = False
+# TODO: Some kind of method to simulate and find stabilization time?
 
-def simulate(pid: PID, exercise: int):
+def simulate(pid: PID, exercise: int | Params):
     # TODO: Is there a meaningful risk that a student will create a PID class that breaks with deepcopy?
     # TODO: The current presimulation approach is convenient, but assumes that the PID controller is deterministic, which is not guaranteed.
     # TODO: The current presimulation approach means that any console output and other side effects in the first 30 seconds will happen twice.
 
-    global _initialized
+    # Convert to params immediately to ensure both simulations get the same random values
+    params = _to_params(exercise)
 
-    fig = matplotlib.pyplot.figure(num=BlockExercise.name)
+    fig = matplotlib.pyplot.figure(num=BlockExercise.name, clear=True)
     ax = fig.gca()
 
     hist_t = np.arange(0, 30, exerciser.DELTA)
     hist_x = []
     hist_vx = []
     hist_F = []
-    presimulate_exercise = BlockExercise(copy.deepcopy(pid))
+    presimulate_exercise = BlockExercise(copy.deepcopy(pid), params)
     for t in hist_t:
         try:
             presimulate_exercise.tick(exerciser.DELTA)
@@ -90,18 +106,16 @@ def simulate(pid: PID, exercise: int):
         hist_x.append(presimulate_exercise.x)
         hist_vx.append(presimulate_exercise.vx)
         hist_F.append(presimulate_exercise.F)
-    cursor = ax.axvline(x=0.0, lw=0.8)
+    # cursor = ax.axvline(x=0.0, lw=0.8)
+    ax.axhline(y=0.0, lw=0.8, ls='--', color="darkgrey")
     ax.plot(hist_t[:len(hist_x)], hist_x, label="x", color="red")
     ax.plot(hist_t[:len(hist_vx)], hist_vx, label="vx", color="green")
     ax.plot(hist_t[:len(hist_F)], hist_F, label="F", color="blue")
     ax.legend()
     
-    if not _initialized:
-        _initialized = True
-        # Calling show only once avoids stealing focus and other unnecessary indicators on reload.
-        matplotlib.pyplot.show(block=False)
+    matplotlib.pyplot.show(block=False)
 
-    exerciser.run(BlockExercise(pid, cursor))
+    exerciser.run(BlockExercise(pid, params))
 
 if __name__ == '__main__':
     raise RuntimeError("Do not run this file directly. Instead call the simulate(..) function from this module in your solution.")
