@@ -8,8 +8,7 @@ class ValidationError(RuntimeError):
 class CodeRunError(RuntimeError):
     pass
 
-# Note: Even though Exercise is structurally typed, it is recommended to explicitly subclass Exercise
-# for better type hints and default implementations of methods.
+# Note: Even though Exercise is structurally typed, it is recommended to explicitly subclass Exercise for better type hints.
 class Exercise(Protocol):
     name: str
 
