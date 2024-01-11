@@ -138,6 +138,7 @@ def _run(exercise: Exercise, error: Optional[BaseException] = None):
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_F1:
                         show_fps = not show_fps
+                    # TODO: Add some way to restart simulation without re-running code (for exercises with random initial state)?
 
             exercise = _exercise
 
