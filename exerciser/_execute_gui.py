@@ -23,9 +23,6 @@ class ErrorProxyExercise:
 
     def draw(self, surface):
         self.exercise.draw(surface)
-    
-    def cleanup(self):
-        self.exercise.cleanup()
 
 @dataclass
 class ExerciseContainer:

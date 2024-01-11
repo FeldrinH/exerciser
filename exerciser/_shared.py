@@ -20,8 +20,3 @@ class Exercise(Protocol):
     @abstractmethod
     def draw(self, screen: pygame.Surface, /) -> None:
         raise NotImplementedError
-    
-    # The cleanup method should be optional, but Python does not allow this to be fully represented with protocols.
-    # TODO: Revisit this if/when https://github.com/python/typing/issues/601 gets resolved.
-    def cleanup(self, /) -> None:
-        pass
