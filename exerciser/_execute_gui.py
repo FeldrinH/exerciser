@@ -2,7 +2,7 @@ import os
 import threading
 import warnings
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
-from typing import Any, Final, List, Optional
+from typing import Final, List, Optional
 import traceback
 import matplotlib._pylab_helpers
 import pygame

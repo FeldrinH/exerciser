@@ -80,9 +80,6 @@ class BlockExercise(exerciser.Exercise):
         self.x += self.vx * delta
 
     def draw(self, screen: pygame.Surface):
-        # if self.cursor is not None:
-        #     self.cursor.set_xdata((self.t, self.t))
-
         exerciser.pygame.show_value(f"α = {self.angle:.1f}°")
         exerciser.pygame.show_value(f"t = {self.t:.2f}")
         exerciser.pygame.show_value(f"x = {self.x:.2f}")
@@ -127,7 +124,6 @@ def plot_value(label: str, value: float):
 def visualize(pid: PID, exercise: int | Params):
     # TODO: Is there a meaningful risk that a student will create a PID class that breaks with deepcopy?
     # TODO: The current presimulation approach is convenient, but assumes that the PID controller is deterministic, which is not guaranteed.
-    # TODO: The current presimulation approach means that any console output and other side effects in the first 30 seconds will happen twice.
 
     # Convert to params immediately to ensure both simulations get the same random values
     params = _to_params(exercise)
@@ -136,16 +132,13 @@ def visualize(pid: PID, exercise: int | Params):
     ax = fig.gca()
 
     hist_t = np.arange(0, 30, exerciser.DELTA)
-    hist_x = []
-    hist_vx = []
-    hist_F = []
+    hist_x, hist_vx, hist_F = [], [], []
     hist_extra = {}
     presimulate_exercise = BlockExercise(copy.deepcopy(pid), params, collect=True)
     for t in hist_t:
         try:
             presimulate_exercise.tick(exerciser.DELTA)
         except (exerciser.CodeRunError, exerciser.ValidationError):
-            # TODO: Better wording?
             ax.set_xlabel(f"Error simulating solution at t = {t:.2f}", color="red", loc='right')
             break
         initial_len = len(hist_x)
@@ -158,12 +151,10 @@ def visualize(pid: PID, exercise: int | Params):
                 if len(data) < initial_len:
                     data += [math.nan] * initial_len
                 data.append(v)
-    # cursor = ax.axvline(x=0.0, lw=0.8)
     ax.axhline(y=0.0, lw=0.8, ls='--', color="darkgrey")
     ax.plot(hist_t[:len(hist_x)], hist_x, label="x", color="red")
     ax.plot(hist_t[:len(hist_vx)], hist_vx, label="vx", color="green")
     ax.plot(hist_t[:len(hist_F)], hist_F, label="F", color="blue")
-    # TODO: Pick color palette that is distinct from the three colors that are manually set
     ax.set_prop_cycle(color=["c", "m", "y", "orange", "brown"])
     for k, v in hist_extra.items():
         ax.plot(hist_t[:len(v)], v, label=k)
