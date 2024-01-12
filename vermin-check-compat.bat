@@ -1,1 +1,1 @@
-vermin --eval-annotations --no-parse-comments --backport typing --violations --target=3.8 ./exerciser
+vermin --eval-annotations --no-parse-comments --backport typing --backport dataclasses --violations --target=3.8 ./exerciser

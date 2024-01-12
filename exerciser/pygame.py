@@ -6,6 +6,20 @@ Coordinate = Union[Tuple[float, float], Sequence[float], pygame.Vector2]
 RGBAOutput = Tuple[int, int, int, int]
 ColorValue = Union[pygame.Color, int, str, Tuple[int, int, int], RGBAOutput, Sequence[int]]
 
+def draw_dashed_line(surface: pygame.Surface, color: ColorValue, start: Coordinate, end: Coordinate, pattern: Tuple[int, int], width: int = 1):
+    axis = pygame.Vector2(end) - pygame.Vector2(start)
+    length = axis.length()
+    axis.normalize_ip()
+
+    # TODO: The individual dashes appear misaligned due to rounding of dash start and end coordinates. Is there some way to improve this? 
+    dash_length, gap_length = pattern
+    pos = 0
+    pos_vec = pygame.Vector2(start)
+    while pos < length:
+        pygame.draw.line(surface, color, pos_vec, pos_vec + dash_length * axis, width)
+        pos += dash_length + gap_length
+        pos_vec += (dash_length + gap_length) * axis
+
 def draw_arrow(surface: pygame.Surface, color: ColorValue, start_pos: Coordinate, offset: Coordinate, width: int):
     end_pos_vec = pygame.Vector2(start_pos[0] + offset[0], start_pos[1] + offset[1])
     dir_vec = pygame.Vector2(offset[0], offset[1])

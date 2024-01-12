@@ -172,7 +172,7 @@ def _run(exercise: Exercise, error: Optional[BaseException] = None):
             # Output variable values
             for i, value in enumerate(_values_to_draw):
                 variables_text_surface = variables_font.render(value, True, "black")
-                screen.blit(variables_text_surface, (0, i * 25))
+                screen.blit(variables_text_surface, (5, i * 25))
                 # if isinstance(v, numbers.Real):
                 #     graph.add_point(k, v)
             _values_to_draw.clear()
@@ -181,7 +181,7 @@ def _run(exercise: Exercise, error: Optional[BaseException] = None):
             
             if last_message_hide is None or pygame.time.get_ticks() < last_message_hide:
                 message_text_surface = variables_font.render(last_message, True, last_message_color)
-                screen.blit(message_text_surface, (0, screen.get_height() - 25))
+                screen.blit(message_text_surface, (5, screen.get_height() - 25))
 
             pygame.display.flip()
 

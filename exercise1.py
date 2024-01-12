@@ -16,7 +16,7 @@ class PID(Protocol):
 
 class Params(NamedTuple):
     x: float
-    force: float
+    angle: float
 
 def _to_params(exercise: int | Params) -> Params:
     if isinstance(exercise, Params):
@@ -26,21 +26,29 @@ def _to_params(exercise: int | Params) -> Params:
     elif exercise == 2:
         return Params(100, 30)
     elif exercise == 3:
-        return Params(random.uniform(-150, 150), random.uniform(-40, 40))
+        return Params(random.uniform(-200, 200), random.uniform(-60, 60))
     else:
         raise exerciser.ValidationError(f"Unknown exercise number: {exercise}")
+
+_GRAVITY = 50 # Effective gravitational acceleration: 50 px/s^2
 
 class BlockExercise(exerciser.Exercise):
     name = "Lab 1 - PID"
 
+    # TODO: Currently distance units are pixels. Should we use more natural distance units such as meters with some kind of scaling constant?
     t = 0.0
     x: float
     vx = 0.0
     F = math.nan
 
     def __init__(self, pid: PID, exercise: int | Params):
-        self.x, self._env_F = _to_params(exercise)
+        self.x, self.angle = _to_params(exercise)
         self.pid = pid
+        self._gravity = math.sin(math.radians(self.angle)) * _GRAVITY 
+        rect = pygame.Surface((30, 23))
+        rect.set_colorkey("black")
+        rect.fill("red")
+        self._rect = pygame.transform.rotate(rect, -self.angle)
 
     def tick(self, delta: float):
         try:
@@ -56,27 +64,38 @@ class BlockExercise(exerciser.Exercise):
 
         self.t += delta
         # TODO: Is silently ignoring NaN bad?
-        self.vx += ((0 if math.isnan(self.F) else self.F) + self._env_F) * delta
+        self.vx += ((0 if math.isnan(self.F) else self.F) + self._gravity) * delta
         self.x += self.vx * delta
 
     def draw(self, screen: pygame.Surface):
-        # TODO: Moving the cursor in real time seems to cause high CPU usage. Is there a way to improve this?
         # if self.cursor is not None:
         #     self.cursor.set_xdata((self.t, self.t))
 
+        exerciser.show_value("α", f"{round(self.angle, 1)}°")
         exerciser.show_value("t", round(self.t, 2))
         exerciser.show_value("x", round(self.x, 2))
         exerciser.show_value("vx", round(self.vx, 2))
         exerciser.show_value("F", round(self.F, 2))
 
-        pygame.draw.line(screen, "gray", (screen.get_width() / 2, 0), (screen.get_width() / 2, screen.get_height()))
+        up_axis = pygame.Vector2(0, -1)
+        up_axis.rotate_ip(self.angle)
+        right_axis = pygame.Vector2(-up_axis.y, up_axis.x)
+        center = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
 
-        center_pos = (self.x + screen.get_width() / 2, screen.get_height() / 2)
-        pygame.draw.rect(screen, "red", ((center_pos[0] - 10, center_pos[1] - 10), (20, 20)))
-        exerciser.pygame.draw_arrow(screen, "purple", center_pos, (self._env_F, 0), 1)
-        exerciser.pygame.draw_arrow(screen, "green3", center_pos, (self.vx, 0), 2)
+        exerciser.pygame.draw_dashed_line(screen, "gray", center + screen.get_height() * up_axis, center - screen.get_height() * up_axis, pattern=(10, 8))
+
+        mass_center = center + self.x * right_axis
+        rect_bounds = self._rect.get_rect()
+        rect_bounds.center = (int(mass_center.x), int(mass_center.y))
+        screen.blit(self._rect, rect_bounds)
+        floor_center = center - 11 * up_axis
+        pygame.draw.line(screen, "orange", floor_center + screen.get_width() * right_axis, floor_center - screen.get_width() * right_axis, width=2)
+
+        # exerciser.pygame.draw_arrow(screen, "purple", mass_center, self._gravity * right_axis, 1)
+        exerciser.pygame.draw_arrow(screen, "purple", mass_center, (0, _GRAVITY), 1)
+        exerciser.pygame.draw_arrow(screen, "green3", mass_center, self.vx * right_axis, 2)
         if not math.isnan(self.F):
-            exerciser.pygame.draw_arrow(screen, "blue", center_pos, (self.F, 0), 2)
+            exerciser.pygame.draw_arrow(screen, "blue", mass_center, self.F * right_axis, 2)
 
 # TODO: Some kind of method to simulate and find stabilization time?
 
@@ -91,6 +110,7 @@ def simulate(pid: PID, exercise: int | Params):
     fig = matplotlib.pyplot.figure(num=BlockExercise.name, clear=True)
     ax = fig.gca()
 
+    # TODO: Some way for students to graph custom values?
     hist_t = np.arange(0, 30, exerciser.DELTA)
     hist_x = []
     hist_vx = []
