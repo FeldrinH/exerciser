@@ -27,11 +27,8 @@ _lock = threading.Lock()
 
 _exercise: Optional[Exercise] = None
 _initialized = False
+# Note: This list is primarily populated using the public function exerciser.pygame.show_value.
 _values_to_draw: List[str] = []
-
-# TODO: This only shows something if a Pygame window is open. Move this to pygame module?
-def show_value(label: str, value: Any):
-    _values_to_draw.append(f"{label} = {value}")
 
 def run(exercise: Exercise, error: Optional[BaseException] = None):
     """

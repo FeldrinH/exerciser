@@ -1,8 +1,9 @@
+from contextvars import ContextVar
 import copy
 import math
 import numbers
 import random
-from typing import NamedTuple, Protocol
+from typing import Any, Dict, NamedTuple, Optional, Protocol, Tuple
 import matplotlib.pyplot
 import exerciser
 import pygame
@@ -32,6 +33,8 @@ def _to_params(exercise: int | Params) -> Params:
 
 _GRAVITY = 50 # Effective gravitational acceleration: 50 px/s^2
 
+_values: ContextVar[Optional[Dict]] = ContextVar('values', default=None)
+
 class BlockExercise(exerciser.Exercise):
     name = "Lab 1 - PID"
 
@@ -41,9 +44,12 @@ class BlockExercise(exerciser.Exercise):
     vx = 0.0
     F = math.nan
 
-    def __init__(self, pid: PID, exercise: int | Params):
+    def __init__(self, pid: PID, exercise: int | Params, collect = False):
         self.x, self.angle = _to_params(exercise)
         self.pid = pid
+        self._collect = collect
+        self._collected_values: Dict[str, Tuple[float, bool]] = {}
+
         self._gravity = math.sin(math.radians(self.angle)) * _GRAVITY 
         rect = pygame.Surface((30, 23))
         rect.set_colorkey("black")
@@ -51,16 +57,22 @@ class BlockExercise(exerciser.Exercise):
         self._rect = pygame.transform.rotate(rect, -self.angle)
 
     def tick(self, delta: float):
+        if self._collect:
+            self._collected_values.clear()
+            _values.set(self._collected_values)
         try:
             control_return = self.pid.control(delta, self.x)
         except Exception as err:
             raise exerciser.CodeRunError("Error running control method") from err
+        finally:
+            if self._collect:
+                _values.set(None)
 
         if not isinstance(control_return, numbers.Real):
             # TODO: Show actual returned value?
             raise exerciser.ValidationError("Error simulating solution: Control method did not return a number")
 
-        self.F = np.clip(control_return, -100, 100)       
+        self.F = min(max(control_return, -100), 100)       
 
         self.t += delta
         # TODO: Is silently ignoring NaN bad?
@@ -71,11 +83,14 @@ class BlockExercise(exerciser.Exercise):
         # if self.cursor is not None:
         #     self.cursor.set_xdata((self.t, self.t))
 
-        exerciser.show_value("α", f"{round(self.angle, 1)}°")
-        exerciser.show_value("t", round(self.t, 2))
-        exerciser.show_value("x", round(self.x, 2))
-        exerciser.show_value("vx", round(self.vx, 2))
-        exerciser.show_value("F", round(self.F, 2))
+        exerciser.pygame.show_value(f"α = {self.angle:.1f}°")
+        exerciser.pygame.show_value(f"t = {self.t:.2f}")
+        exerciser.pygame.show_value(f"x = {self.x:.2f}")
+        exerciser.pygame.show_value(f"vx = {self.vx:.2f}")
+        exerciser.pygame.show_value(f"F = {self.F:.2f}")
+
+        for k, (v, _) in self._collected_values.items():
+            exerciser.pygame.show_value(f"{k} = {v:.2f}")
 
         up_axis = pygame.Vector2(0, -1)
         up_axis.rotate_ip(self.angle)
@@ -99,7 +114,17 @@ class BlockExercise(exerciser.Exercise):
 
 # TODO: Some kind of method to simulate and find stabilization time?
 
-def simulate(pid: PID, exercise: int | Params):
+def show_value(label: str, value: Any):
+    values = _values.get()
+    if values is not None:
+        values[label] = (value, False)
+
+def plot_value(label: str, value: float):
+    values = _values.get()
+    if values is not None:
+        values[label] = (value, True)
+
+def visualize(pid: PID, exercise: int | Params):
     # TODO: Is there a meaningful risk that a student will create a PID class that breaks with deepcopy?
     # TODO: The current presimulation approach is convenient, but assumes that the PID controller is deterministic, which is not guaranteed.
     # TODO: The current presimulation approach means that any console output and other side effects in the first 30 seconds will happen twice.
@@ -110,12 +135,12 @@ def simulate(pid: PID, exercise: int | Params):
     fig = matplotlib.pyplot.figure(num=BlockExercise.name, clear=True)
     ax = fig.gca()
 
-    # TODO: Some way for students to graph custom values?
     hist_t = np.arange(0, 30, exerciser.DELTA)
     hist_x = []
     hist_vx = []
     hist_F = []
-    presimulate_exercise = BlockExercise(copy.deepcopy(pid), params)
+    hist_extra = {}
+    presimulate_exercise = BlockExercise(copy.deepcopy(pid), params, collect=True)
     for t in hist_t:
         try:
             presimulate_exercise.tick(exerciser.DELTA)
@@ -123,19 +148,30 @@ def simulate(pid: PID, exercise: int | Params):
             # TODO: Better wording?
             ax.set_xlabel(f"Error simulating solution at t = {t:.2f}", color="red", loc='right')
             break
+        initial_len = len(hist_x)
         hist_x.append(presimulate_exercise.x)
         hist_vx.append(presimulate_exercise.vx)
         hist_F.append(presimulate_exercise.F)
+        for k, (v, plot) in presimulate_exercise._collected_values.items():
+            if plot:
+                data = hist_extra.setdefault(k, [])
+                if len(data) < initial_len:
+                    data += [math.nan] * initial_len
+                data.append(v)
     # cursor = ax.axvline(x=0.0, lw=0.8)
     ax.axhline(y=0.0, lw=0.8, ls='--', color="darkgrey")
     ax.plot(hist_t[:len(hist_x)], hist_x, label="x", color="red")
     ax.plot(hist_t[:len(hist_vx)], hist_vx, label="vx", color="green")
     ax.plot(hist_t[:len(hist_F)], hist_F, label="F", color="blue")
+    # TODO: Pick color palette that is distinct from the three colors that are manually set
+    ax.set_prop_cycle(color=["c", "m", "y", "orange", "brown"])
+    for k, v in hist_extra.items():
+        ax.plot(hist_t[:len(v)], v, label=k)
     ax.legend()
     
     matplotlib.pyplot.show(block=False)
 
-    exerciser.run(BlockExercise(pid, params))
+    exerciser.run(BlockExercise(pid, params, collect=True))
 
 if __name__ == '__main__':
     raise RuntimeError("Do not run this file directly. Instead call the simulate(..) function from this module in your solution.")

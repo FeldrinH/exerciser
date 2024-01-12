@@ -1,10 +1,18 @@
 from typing import Sequence, Tuple, Union
 import pygame
 
+from ._execute_gui import _values_to_draw
+
 # Types copied from pygame/_common.pyi
 Coordinate = Union[Tuple[float, float], Sequence[float], pygame.Vector2]
 RGBAOutput = Tuple[int, int, int, int]
 ColorValue = Union[pygame.Color, int, str, Tuple[int, int, int], RGBAOutput, Sequence[int]]
+
+# TODO: This conflicts with a common name for a similar function in exercise files (for example see exercise1.py). Rename this to avoid the conflict?
+def show_value(value: str):
+    # For technical reasons drawing of values is currently implemented in _execute_gui.
+    # This just adds the value to the list of values to draw.
+    _values_to_draw.append(value)
 
 def draw_dashed_line(surface: pygame.Surface, color: ColorValue, start: Coordinate, end: Coordinate, pattern: Tuple[int, int], width: int = 1):
     axis = pygame.Vector2(end) - pygame.Vector2(start)

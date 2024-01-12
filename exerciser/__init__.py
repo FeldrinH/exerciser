@@ -1,3 +1,3 @@
-from ._execute_gui import run, show_value, DELTA, TPS
+from ._execute_gui import run, DELTA, TPS
 from ._shared import Exercise, ValidationError, CodeRunError
 from . import pygame
