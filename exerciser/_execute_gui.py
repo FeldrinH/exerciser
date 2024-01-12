@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import os
 import threading
 import warnings
@@ -23,11 +22,6 @@ class ErrorProxyExercise:
 
     def draw(self, surface):
         self.exercise.draw(surface)
-
-@dataclass
-class ExerciseContainer:
-    exercise: Exercise
-    is_valid: bool
 
 _lock = threading.Lock()
 
