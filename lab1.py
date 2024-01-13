@@ -37,7 +37,7 @@ _GRAVITY = 50 # Effective gravitational acceleration: 50 px/s^2
 # # Thread-local variable for storing reference to dictionary where user-shown values are stored.
 # _collection_target: ContextVar[Optional[Dict]] = ContextVar('collected_values', default=None)
 
-class BlockExercise(exerciser.Exercise):
+class PIDSimulation(exerciser.Simulation):
     name = "Lab 1 - PID"
 
     # TODO: Currently distance units are pixels. Should we use more natural distance units such as meters with some kind of scaling constant?
@@ -86,11 +86,11 @@ class BlockExercise(exerciser.Exercise):
         self.x += self.vx * delta
 
     def draw(self, screen: pygame.Surface):
-        exerciser.show_exercise_value("α", f"{self.angle:.1f}°")
-        exerciser.show_exercise_value("t", f"{self.t:.2f}")
-        exerciser.show_exercise_value("x", f"{self.x:.2f}")
-        exerciser.show_exercise_value("vx", f"{self.vx:.2f}")
-        exerciser.show_exercise_value("F", f"{self.F:.2f}")
+        exerciser.show_simulation_value("α", f"{self.angle:.1f}°")
+        exerciser.show_simulation_value("t", f"{self.t:.2f}")
+        exerciser.show_simulation_value("x", f"{self.x:.2f}")
+        exerciser.show_simulation_value("vx", f"{self.vx:.2f}")
+        exerciser.show_simulation_value("F", f"{self.F:.2f}")
 
         # for k, (v, _) in self._collected_values.items():
         #     if isinstance(v, float):
@@ -142,23 +142,23 @@ def visualize(pid: PID, exercise: int | Params):
     # Convert to params immediately to ensure both simulations get the same random values
     params = _to_params(exercise)
 
-    fig = matplotlib.pyplot.figure(num=BlockExercise.name, clear=True)
+    fig = matplotlib.pyplot.figure(num=PIDSimulation.name, clear=True)
     ax = fig.gca()
 
     hist_t = np.arange(0, 30, exerciser.DELTA)
     hist_x, hist_vx, hist_F = [], [], []
     # hist_extra = {}
-    presimulate_exercise = BlockExercise(copy.deepcopy(pid), params)
+    sim = PIDSimulation(copy.deepcopy(pid), params)
     for t in hist_t:
         try:
-            presimulate_exercise.tick(DELTA)
+            sim.tick(DELTA)
         except (exerciser.CodeRunError, exerciser.ValidationError):
             ax.set_xlabel(f"Error simulating solution at t = {t:.2f}", color="red", loc='right')
             break
         # initial_len = len(hist_x)
-        hist_x.append(presimulate_exercise.x)
-        hist_vx.append(presimulate_exercise.vx)
-        hist_F.append(presimulate_exercise.F)
+        hist_x.append(sim.x)
+        hist_vx.append(sim.vx)
+        hist_F.append(sim.F)
         # for k, (v, plot) in presimulate_exercise._collected_values.items():
         #     if plot:
         #         data = hist_extra.setdefault(k, [])
@@ -176,7 +176,7 @@ def visualize(pid: PID, exercise: int | Params):
     
     matplotlib.pyplot.show(block=False)
 
-    exerciser.run(BlockExercise(pid, params))
+    exerciser.run(PIDSimulation(pid, params))
 
 if __name__ == '__main__':
     raise RuntimeError("Do not run this file directly. Instead call the simulate(..) function from this module in your solution.")

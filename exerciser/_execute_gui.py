@@ -7,30 +7,29 @@ from typing import Any, Final, List, Optional
 import traceback
 import matplotlib._pylab_helpers
 import pygame
-from ._shared import CodeRunError, Exercise, ValidationError
+from ._shared import CodeRunError, Simulation, ValidationError
 
 TPS: Final[int] = 60
 """Default tick rate in ticks per second"""
 DELTA: Final[float] = 1 / TPS
 """Default time delta between ticks in seconds"""
 
-class ErrorProxyExercise:
-    def __init__(self, exercise: Exercise, error: BaseException) -> None:
-        self.name = exercise.name
-        self.exercise = exercise
+class ErrorProxySimulation:
+    def __init__(self, simulation: Simulation, error: BaseException) -> None:
+        self.name = simulation.name
+        self.simulation = simulation
         self.error = error
     
     def tick(self, _):
         raise self.error
 
     def draw(self, surface):
-        self.exercise.draw(surface)
+        self.simulation.draw(surface)
 
 _lock = threading.Lock()
 
-_exercise: Optional[Exercise] = None
+_simulation: Optional[Simulation] = None
 _initialized = False
-# Note: This list is primarily populated using the public function exerciser.pygame.show_value.
 _values_to_draw: ContextVar[Optional[List[str]]] = ContextVar('values', default=None)
 _user_values_to_draw: ContextVar[Optional[List[str]]] = ContextVar('user_values', default=None)
 
@@ -40,15 +39,15 @@ def show_value(label: str, value: Any):
     if values is not None:
         values.append(f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}")
 
-def show_exercise_value(label: str, value: Any):
-    """Show an exercise-specific value on screen for informational/debugging purposes"""
+def show_simulation_value(label: str, value: Any):
+    """Show an simulation-specific value on screen for informational/debugging purposes"""
     values = _values_to_draw.get()
     if values is not None:
         values.append(f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}")
 
-def run(exercise: Exercise, error: Optional[BaseException] = None):
+def run(simulation: Simulation, error: Optional[BaseException] = None):
     """
-    Runs provided `exercise` in a Pygame window. If `error` is provided behaves as if the error was raised by the exercise on the first tick.
+    Runs provided `simulation` in a Pygame window. If `error` is provided behaves as if the error was raised by the exercise on the first tick.
 
     Yields time to matplotlib windows for processing events and updating plots, if any exist.
     This allows it to run at the same time as matplotlib without issues.
@@ -70,19 +69,19 @@ def run(exercise: Exercise, error: Optional[BaseException] = None):
         tk_pygame_compat_warning = 'matplotlib is using the Tk backend. Tk has compatibility issues with Pygame that may cause Python to crash. Using a different matplotlib backend is recommended.'
         warnings.warn(tk_pygame_compat_warning, RuntimeWarning)
 
-    threading.Thread(target=_run, args=(exercise, error)).start()
+    threading.Thread(target=_run, args=(simulation, error)).start()
 
-def _run(exercise: Exercise, error: Optional[BaseException] = None):
-    global _exercise, _initialized
+def _run(simulation: Simulation, error: Optional[BaseException] = None):
+    global _simulation, _initialized
 
     # TODO: It might be necessary to add more locking for thread safety.
     # Simple assignment is atomic on current CPython but that is not guaranteed for other implementations or future versions of CPython.
 
     if error is None:
-        _exercise = exercise
+        _simulation = simulation
     else:
-        _exercise = ErrorProxyExercise(exercise, error)
-    del exercise, error # Unbind to avoid accidentally using the initial exercise value and allow GC
+        _simulation = ErrorProxySimulation(simulation, error)
+    del simulation, error # Unbind to avoid accidentally using the initial exercise value and allow GC
 
     with _lock:
         if _initialized:
@@ -128,7 +127,7 @@ def _run(exercise: Exercise, error: Optional[BaseException] = None):
     pygame.display.init()
     pygame.font.init()
     screen = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
-    pygame.display.set_caption(_exercise.name)
+    pygame.display.set_caption(_simulation.name)
     clock = pygame.time.Clock()
     variables_font = pygame.font.SysFont('Arial', 20)
 
@@ -139,7 +138,7 @@ def _run(exercise: Exercise, error: Optional[BaseException] = None):
     tick = 0
     show_fps = False
 
-    last_invalid_exercise = None
+    last_invalid_simulation = None
 
     try:
         while running:
@@ -149,20 +148,20 @@ def _run(exercise: Exercise, error: Optional[BaseException] = None):
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_F1:
                         show_fps = not show_fps
-                    # TODO: Add some way to restart simulation without re-running code (for exercises with random initial state)?
+                    # TODO: Add some way to restart simulation without re-running code (for simulations with random initial state)?
 
-            exercise = _exercise
+            simulation = _simulation
 
-            if exercise is not None and exercise is not last_invalid_exercise:
-                if last_invalid_exercise is not None:
+            if simulation is not None and simulation is not last_invalid_simulation:
+                if last_invalid_simulation is not None:
                     # Clear previous error.
                     clear_message()
                 try:
                     # Tick with fixed delta to ensure that simulation is as deterministic as possible
-                    exercise.tick(DELTA)
+                    simulation.tick(DELTA)
                 except ValidationError as e:
                     show_message(f"{e}", "red", None)
-                    last_invalid_exercise = exercise
+                    last_invalid_simulation = simulation
                 except CodeRunError as e:
                     cause = e.__cause__ or e.__context__
                     if cause is None:
@@ -170,15 +169,15 @@ def _run(exercise: Exercise, error: Optional[BaseException] = None):
                     else:
                         show_message(f"{e}: {type(cause).__name__}: {cause}", "red", None)
                         traceback.print_tb(cause.__traceback__)
-                    last_invalid_exercise = exercise
+                    last_invalid_simulation = simulation
 
             screen.fill("white")
 
             if show_fps:
                 values_to_draw.append(f"FPS: {clock.get_fps():.2f}")
 
-            if exercise is not None:
-                exercise.draw(screen)
+            if simulation is not None:
+                simulation.draw(screen)
 
             # Output variable values
             for i, value in enumerate(values_to_draw):
