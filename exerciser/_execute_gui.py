@@ -168,7 +168,7 @@ def _run(simulation: Simulation, error: Optional[BaseException] = None):
                         show_message(f"{e}: <unknown cause>", "red", None)
                     else:
                         show_message(f"{e}: {type(cause).__name__}: {cause}", "red", None)
-                        traceback.print_tb(cause.__traceback__)
+                        traceback.print_exception(cause)
                     last_invalid_simulation = simulation
 
             screen.fill("white")
