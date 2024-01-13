@@ -1,8 +1,9 @@
+from contextvars import ContextVar
 import os
 import threading
 import warnings
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
-from typing import Final, List, Optional
+from typing import Any, Final, List, Optional
 import traceback
 import matplotlib._pylab_helpers
 import pygame
@@ -28,7 +29,20 @@ _lock = threading.Lock()
 _exercise: Optional[Exercise] = None
 _initialized = False
 # Note: This list is primarily populated using the public function exerciser.pygame.show_value.
-_values_to_draw: List[str] = []
+_values_to_draw: ContextVar[Optional[List[str]]] = ContextVar('values', default=None)
+_user_values_to_draw: ContextVar[Optional[List[str]]] = ContextVar('user_values', default=None)
+
+def show_value(label: str, value: Any):
+    """Show a user-supplied value on screen for debugging purposes"""
+    values = _user_values_to_draw.get()
+    if values is not None:
+        values.append(f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}")
+
+def show_exercise_value(label: str, value: Any):
+    """Show an exercise-specific value on screen for informational/debugging purposes"""
+    values = _values_to_draw.get()
+    if values is not None:
+        values.append(f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}")
 
 def run(exercise: Exercise, error: Optional[BaseException] = None):
     """
@@ -116,6 +130,10 @@ def _run(exercise: Exercise, error: Optional[BaseException] = None):
     clock = pygame.time.Clock()
     variables_font = pygame.font.SysFont('Arial', 20)
 
+    values_to_draw, user_values_to_draw = [], []
+    _values_to_draw.set(values_to_draw)
+    _user_values_to_draw.set(user_values_to_draw)
+
     tick = 0
     show_fps = False
 
@@ -155,18 +173,21 @@ def _run(exercise: Exercise, error: Optional[BaseException] = None):
             screen.fill("white")
 
             if show_fps:
-                _values_to_draw.append(f"FPS: {clock.get_fps():.2f}")
+                values_to_draw.append(f"FPS: {clock.get_fps():.2f}")
 
             if exercise is not None:
                 exercise.draw(screen)
 
             # Output variable values
-            for i, value in enumerate(_values_to_draw):
+            for i, value in enumerate(values_to_draw):
                 variables_text_surface = variables_font.render(value, True, "black")
                 screen.blit(variables_text_surface, (5, i * 25))
-                # if isinstance(v, numbers.Real):
-                #     graph.add_point(k, v)
-            _values_to_draw.clear()
+            user_values_start = len(values_to_draw) * 25 + 5
+            for i, value in enumerate(user_values_to_draw):
+                variables_text_surface = variables_font.render(value, True, "black")
+                screen.blit(variables_text_surface, (5, user_values_start + i * 25))
+            values_to_draw.clear()
+            user_values_to_draw.clear()
             
             #graph.draw(screen, 0, screen.get_height() - 200)
             
