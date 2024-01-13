@@ -10,7 +10,9 @@ import pygame
 from ._shared import CodeRunError, Exercise, ValidationError
 
 TPS: Final[int] = 60
+"""Default tick rate in ticks per second"""
 DELTA: Final[float] = 1 / TPS
+"""Default time delta between ticks in seconds"""
 
 class ErrorProxyExercise:
     def __init__(self, exercise: Exercise, error: BaseException) -> None:
