@@ -33,7 +33,8 @@ def _to_params(exercise: int | Params) -> Params:
 
 _GRAVITY = 50 # Effective gravitational acceleration: 50 px/s^2
 
-_values: ContextVar[Optional[Dict]] = ContextVar('values', default=None)
+# Thread-local variable for storing reference to dictionary where user-shown values are stored.
+_collection_target: ContextVar[Optional[Dict]] = ContextVar('collected_values', default=None)
 
 class BlockExercise(exerciser.Exercise):
     name = "Lab 1 - PID"
@@ -47,6 +48,7 @@ class BlockExercise(exerciser.Exercise):
     def __init__(self, pid: PID, exercise: int | Params, collect = False):
         self.x, self.angle = _to_params(exercise)
         self.pid = pid
+        # Values passed to `show_value(..)` inside `pid.control(..)` are collected to `_collected_values`, if `collect` is true.
         self._collect = collect
         self._collected_values: Dict[str, Tuple[float, bool]] = {}
 
@@ -57,16 +59,19 @@ class BlockExercise(exerciser.Exercise):
         self._rect = pygame.transform.rotate(rect, -self.angle)
 
     def tick(self, delta: float):
+        # Start collecting values to `_collected_values`
         if self._collect:
             self._collected_values.clear()
-            _values.set(self._collected_values)
+            _collection_target.set(self._collected_values)
+        # Run PID controller `control` method
         try:
             control_return = self.pid.control(delta, self.x)
         except Exception as err:
             raise exerciser.CodeRunError("Error running control method") from err
         finally:
+            # Stop collecting values to `_collected_values`
             if self._collect:
-                _values.set(None)
+                _collection_target.set(None)
 
         if not isinstance(control_return, numbers.Real):
             # TODO: Show actual returned value?
@@ -87,7 +92,10 @@ class BlockExercise(exerciser.Exercise):
         exerciser.pygame.show_value(f"F = {self.F:.2f}")
 
         for k, (v, _) in self._collected_values.items():
-            exerciser.pygame.show_value(f"{k} = {v:.2f}")
+            if isinstance(v, float):
+                exerciser.pygame.show_value(f"{k} = {v:.2f}")
+            else:
+                exerciser.pygame.show_value(f"{k} = {v}")
 
         up_axis = pygame.Vector2(0, -1)
         up_axis.rotate_ip(self.angle)
@@ -111,15 +119,12 @@ class BlockExercise(exerciser.Exercise):
 
 # TODO: Some kind of method to simulate and find stabilization time?
 
-def show_value(label: str, value: Any):
-    values = _values.get()
+def show_value(label: str, value: Any, plot = False):
+    values = _collection_target.get()
     if values is not None:
-        values[label] = (value, False)
-
-def plot_value(label: str, value: float):
-    values = _values.get()
-    if values is not None:
-        values[label] = (value, True)
+        if plot and not isinstance(value, numbers.Real):
+            raise ValueError(f"Cannot plot non-numeric value {value}")
+        values[label] = (value, plot)
 
 def visualize(pid: PID, exercise: int | Params):
     # TODO: Is there a meaningful risk that a student will create a PID class that breaks with deepcopy?
