@@ -173,7 +173,7 @@ def visualize(pid: PID, exercise: int | Params):
     # for k, v in hist_extra.items():
     #     ax.plot(hist_t[:len(v)], v, label=k)
     ax.legend()
-    
+
     matplotlib.pyplot.show(block=False)
 
     exerciser.run(PIDSimulation(pid, params))

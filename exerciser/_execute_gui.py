@@ -90,24 +90,12 @@ def _run(simulation: Simulation, error: Optional[BaseException] = None):
     
     running = True
 
-    # TODO: Is there a better way to detect non-interactive backends?
-    # TODO: The backend can change while Pygame is open. Is there a better way to handle that?
-    enable_matplotlib_compat = 'inline' not in matplotlib.get_backend().casefold()
+    # TODO: Moving Pygame into a separate thread has broken matplotlib compatibility outside of interactive notebooks.
+    # See comments labeled with 'Matplotlib compatibility' for specific issues.
 
-    if enable_matplotlib_compat:
-        def quit():
-            nonlocal running
-            if running:
-                running = False
-                try:
-                    matplotlib._pylab_helpers.Gcf.destroy_all()
-                except Exception:
-                    # Calling Gcf.destroy_all() while matplotlib is already closing tends to cause errors.
-                    # It should be safe to ignore them to avoid spamming console.
-                    pass
-
-        for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():
-            manager.canvas.mpl_connect('close_event', lambda _: quit())
+    # TODO: Matplotlib compatibility: When Pygame closes, it should probably close all the matplotlib figures as well.
+    # When matplotlib closes, it should close the Pygame window.
+    # Note that matplotlib figures could be created after Pygame has started.
 
     last_message = ""
     last_message_color = "black"
@@ -189,28 +177,24 @@ def _run(simulation: Simulation, error: Optional[BaseException] = None):
                 screen.blit(variables_text_surface, (5, user_values_start + i * 25))
             values_to_draw.clear()
             user_values_to_draw.clear()
-            
-            #graph.draw(screen, 0, screen.get_height() - 200)
-            
+
             if last_message_hide is None or pygame.time.get_ticks() < last_message_hide:
                 message_text_surface = variables_font.render(last_message, True, last_message_color)
                 screen.blit(message_text_surface, (5, screen.get_height() - 25))
 
             pygame.display.flip()
 
-            if enable_matplotlib_compat:
-                # Yield time to matplotlib for processing events and updating plots.
-                # Note: Using this instead of matplotlib.pyplot.pause() avoids the matplotlib window showing up when matplotlib is loaded but not currently in use.
-                # Note: Redrawing only happens every 3 frames (giving matplotlib an effective max FPS of 20), because redrawing the plot is fairly CPU intensive.
-                # TODO: Animated plots seem to more or less work with the ipympl backend, but this needs more testing.
-                if tick % 3 == 0:
-                    for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():
-                        canvas = manager.canvas
-                        if canvas.figure.stale:
-                            canvas.draw_idle()
-                manager = matplotlib._pylab_helpers.Gcf.get_active()
-                if manager is not None:
-                    manager.canvas.start_event_loop(DELTA * 0.2)
+            # TODO: Matplotlib compatibility: draw_idle needs to be called regularly to make live updates to data work.
+            # On the other hand, calling draw_idle from a different thread for no good reason is probably a bad idea,
+            # so for maximum compatibility we currently don't do this automatically.
+            # Should we do this automatically in some cases?
+
+            # Example generic redraw logic:
+            # if tick % 3 == 0:
+            #     for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():
+            #         canvas = manager.canvas
+            #         if canvas.figure.stale:
+            #             canvas.draw_idle()
 
             clock.tick(TPS)
             tick += 1
