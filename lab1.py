@@ -160,6 +160,7 @@ def plot(pid: PID, params: ExerciseParams, max_time = 30, interactive = False):
         # TODO: Clearing resets zoom (only relevant with widget backend). Is there a way to update data on existing lines without lots of extra code?
         with plt.ioff():
             fig = plt.figure(f"{PIDSimulation.name} - Interactive", clear=True)
+        # TODO: Pylance reports `fig` as possibly unbound for no apparent reason. Remove this workaround once https://github.com/microsoft/pyright/issues/7009 is fixed.
         fig = fig # type: ignore
     else:
         # Creating a new plot every time will eventually hurt performance when using the widget backend.
