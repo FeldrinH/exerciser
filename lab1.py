@@ -156,7 +156,7 @@ def plot(pid: PID, params: ExerciseParams, max_time = 30, interactive = False):
     This is meant to be used with `ipywidgets.interact`.
     """
 
-    # `widget` backend in general is full of hidden assumptions that need to be upheld for it to work.
+    # `widget` backend in general is full of hidden assumptions that need to be upheld for it to behave as expected.
     # See TODO notes below for some specific issues.
     # TODO: Track https://github.com/matplotlib/ipympl/issues/171, https://github.com/matplotlib/ipympl/issues/60 and https://github.com/matplotlib/ipympl/issues/4.
     # Update workarounds if/when these issues get resolved.
@@ -166,7 +166,7 @@ def plot(pid: PID, params: ExerciseParams, max_time = 30, interactive = False):
         # TODO: Reusing the same plot makes all interactive plots share the same data. Is there a way to fix this without having to manually pass in a figure or figure id?
         with plt.ioff():
             fig = plt.figure(f"{PIDSimulation.name} - Interactive", clear=True)
-        # TODO: Pylance reports `fig` as possibly unbound for no apparent reason. Remove this workaround once https://github.com/microsoft/pyright/issues/7009 is fixed.
+        # TODO: Pylance reports `fig` as possibly unbound due to a type checking limitation. Remove this workaround once https://github.com/matplotlib/matplotlib/issues/27659 is resolved.
         fig = fig # type: ignore
     else:
         # Creating a new plot every time will eventually hurt performance when using the widget backend.
