@@ -2,11 +2,12 @@ import copy
 import math
 import numbers
 import random
-from typing import NamedTuple, Protocol
-import matplotlib.pyplot
-import exerciser
-import pygame
+from typing import NamedTuple, Optional, Protocol, Union
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 import numpy as np
+import exerciser
+import pygame # Note: Pygame must be imported after exerciser to avoid the welcome message.
 
 from exerciser import show_value, DELTA, TPS # Re-export
 
@@ -127,25 +128,36 @@ class PIDSimulation(exerciser.Simulation):
 #             raise ValueError(f"Cannot plot non-numeric value {value}")
 #         values[label] = (value, plot)
 
-def visualize(pid: PID, exercise: int | Params):
+# TODO: It might be nice to split visualize into two methods. One to plot the matplotlib graph and one to show the Pygame visualization.
+# Unsolved problem: How to deal with exercises that have randomized parameters?
+
+def visualize(pid: PID, exercise: int | Params, max_time = 30, interactive_figure: Optional[Figure] = None):
     """
     Simulate and visualize the behavior of the given PID controller
 
     Shows a matplotlib plot with the values of some relevant variables over time (block position `x`, velocity `vx` and PID controller applied force `F`).
 
     Also shows a live simulation of the same setup in a new window.
+
+    Passing `interactive_figure` enables interactive mode. The graph wil be drawn into the provided figure, instead of creating a new figure.
     """
 
     # TODO: Is there a meaningful risk that a student will create a PID class that breaks with deepcopy?
     # TODO: The current presimulation approach is convenient, but assumes that the PID controller is deterministic, which is not guaranteed.
+    # TODO: Taking in a figure for interactive drawing is kind of a leaky abstraction. Is there a better way?
 
     # Convert to params immediately to ensure both simulations get the same random values
     params = _to_params(exercise)
 
-    fig = matplotlib.pyplot.figure(num=PIDSimulation.name, clear=True)
+    if interactive_figure is not None:
+        fig = interactive_figure
+        fig.clear()
+    else:
+        fig = plt.figure()
     ax = fig.gca()
+    fig.set_label(PIDSimulation.name)
 
-    hist_t = np.arange(0, 30, exerciser.DELTA)
+    hist_t = np.arange(0, max_time, exerciser.DELTA)
     hist_x, hist_vx, hist_F = [], [], []
     # hist_extra = {}
     sim = PIDSimulation(copy.deepcopy(pid), params)
@@ -174,9 +186,14 @@ def visualize(pid: PID, exercise: int | Params):
     #     ax.plot(hist_t[:len(v)], v, label=k)
     ax.legend()
 
-    matplotlib.pyplot.show(block=False)
-
-    exerciser.run(PIDSimulation(pid, params))
+    if interactive_figure is not None:
+        # Calling fig.show instead works as well and might be more general, but causes the figure to appear multiple times in interactive mode (ipympl backend is in interactive mode by default).
+        # TODO: What exactly is the difference between show and draw_idle? Is there any need to call show here?
+        fig.canvas.draw_idle()
+        # TODO: Should we disable the Pygame visualization here? It is probably not very useful with the interactive graph.
+    else:
+        plt.show()
+        exerciser.run(PIDSimulation(pid, params))
 
 if __name__ == '__main__':
     raise RuntimeError("Do not run this file directly. Instead call the simulate(..) function from this module in your solution.")

@@ -2,5 +2,5 @@ numpy~=1.26
 scipy~=1.11
 matplotlib~=3.8
 control~=0.9.4
-pyqt5==5.*
+ipywidgets~=8.1
 exerciser @ git+https://github.com/FeldrinH/exerciser@master

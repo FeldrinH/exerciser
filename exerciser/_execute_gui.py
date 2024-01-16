@@ -1,8 +1,8 @@
-from contextvars import ContextVar
 import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+from contextvars import ContextVar
 import threading
 import warnings
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 from typing import Any, Final, List, Optional
 import traceback
 import matplotlib._pylab_helpers
