@@ -17,23 +17,16 @@ def show_interactive(figure: Figure):
     else:
         # Other (common) backends redraw automatically in interactive mode, but might not show the figure unless plt.show is called.
         # We automatically call plt.show once cell execution has completed.
-        _autoshow()
+        autoshow()
 
 _autoshow_queued = False
-_ipython_hooks_registered = False
 
-def _autoshow():
+def autoshow():
     """
     Automatically calls plt.show once execution of this cell has ended.
     """
-    global _autoshow_queued, _ipython_hooks_registered
+    global _autoshow_queued
     _autoshow_queued = True
-    if not _ipython_hooks_registered:
-        ip = get_ipython()
-        if ip is not None:
-            ip.events.register('pre_run_cell', _autoshow_pre_run_cell)
-            ip.events.register('post_run_cell', _autoshow_post_run_cell)
-            _ipython_hooks_registered = True
 
 def _autoshow_pre_run_cell():
     global _autoshow_queued
@@ -44,3 +37,8 @@ def _autoshow_post_run_cell():
     if _autoshow_queued:
         _autoshow_queued = False
         plt.show()
+
+ip = get_ipython()
+if ip is not None:
+    ip.events.register('pre_run_cell', _autoshow_pre_run_cell)
+    ip.events.register('post_run_cell', _autoshow_post_run_cell)
