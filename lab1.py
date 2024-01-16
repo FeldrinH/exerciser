@@ -1,4 +1,5 @@
 import copy
+import inspect
 import math
 import numbers
 import random
@@ -17,19 +18,22 @@ class PID(Protocol):
     def control(self, delta: float, x: float) -> float:
         ...
 
-class Params(NamedTuple):
+class ExerciseParams(NamedTuple):
     x: float
     angle: float
 
-def _to_params(exercise: int | Params) -> Params:
-    if isinstance(exercise, Params):
-        return exercise
-    elif exercise == 1:
-        return Params(100, 0)
+def get_exercise_params(exercise: int) -> ExerciseParams:
+    """
+    Get exercise parameters by exercise number (in the range 1..3).
+    Note that the parameters of exercise 3 are random.
+    """
+
+    if exercise == 1:
+        return ExerciseParams(100, 0)
     elif exercise == 2:
-        return Params(100, 30)
+        return ExerciseParams(100, 30)
     elif exercise == 3:
-        return Params(random.uniform(-200, 200), random.uniform(-60, 60))
+        return ExerciseParams(random.uniform(-200, 200), random.uniform(-60, 60))
     else:
         raise exerciser.ValidationError(f"Unknown exercise number: {exercise}")
 
@@ -47,8 +51,11 @@ class PIDSimulation(exerciser.Simulation):
     vx = 0.0
     F = math.nan
 
-    def __init__(self, pid: PID, exercise: int | Params):
-        self.x, self.angle = _to_params(exercise)
+    def __init__(self, pid: PID, params: ExerciseParams):
+        if not isinstance(params, ExerciseParams):
+            raise exerciser.ValidationError(f"Expected exercise parameters, got {params}. (Call get_exercise_params(..) to get a exercise parameters.)")
+
+        self.x, self.angle = params
         self.pid = pid
         # # Values passed to `show_value(..)` inside `pid.control(..)` are collected to `_collected_values`, if `collect` is true.
         # self._collect = collect
@@ -128,45 +135,46 @@ class PIDSimulation(exerciser.Simulation):
 #             raise ValueError(f"Cannot plot non-numeric value {value}")
 #         values[label] = (value, plot)
 
-# TODO: It might be nice to split visualize into two methods. One to plot the matplotlib graph and one to show the Pygame visualization.
-# Unsolved problem: How to deal with exercises that have randomized parameters?
-
-def visualize(pid: PID, exercise: int | Params, max_time = 30, interactive_figure: Optional[Figure] = None):
+def plot_and_visualize(pid: PID, params: ExerciseParams, max_time = 30, interactive_figure: Optional[Figure] = None):
     """
-    Simulate and visualize the behavior of the given PID controller
+    Convenience function to plot and visualize the behavior of the given PID controller with one function call.
+
+    Equivalent to calling `plot` and `visualize`.
+    """
+    plot(pid, params, max_time, interactive_figure)
+    visualize(pid, params)
+
+# Note: plot and visualize make a deep copy of the PID controller to avoid mutating the original value.
+# TODO: Is an automatic deep copy an antipatern?
+# TODO: Is there a meaningful risk that a student will create a PID class that breaks with deepcopy?
+
+def plot(pid: PID, params: ExerciseParams, max_time = 30, interactive_figure: Optional[Figure] = None):
+    """
+    Simulate and plot the behavior of the given PID controller.
 
     Shows a matplotlib plot with the values of some relevant variables over time (block position `x`, velocity `vx` and PID controller applied force `F`).
-
-    Also shows a live simulation of the same setup in a new window.
 
     Passing `interactive_figure` enables interactive mode. The graph wil be drawn into the provided figure, instead of creating a new figure.
     """
 
-    # TODO: Is there a meaningful risk that a student will create a PID class that breaks with deepcopy?
-    # TODO: The current presimulation approach is convenient, but assumes that the PID controller is deterministic, which is not guaranteed.
-    # TODO: Taking in a figure for interactive drawing is kind of a leaky abstraction. Is there a better way?
-
-    # Convert to params immediately to ensure both simulations get the same random values
-    params = _to_params(exercise)
-
     if interactive_figure is not None:
         fig = interactive_figure
+        # TODO: Clearing resets zoom. Is there a way to update data on existing lines without lots of extra code?
         fig.clear()
     else:
-        fig = plt.figure()
+        # Creating a new plot every time will eventually hurt performance when using the ipympl backend.
+        # Closing the previous plot prevents drawing multiple interactive plots with this function.
+        # TODO: Is there a way to avoid performance issues while still allowing more than one plot to be active at the same time?
+        plt.close(PIDSimulation.name)
+        fig = plt.figure(PIDSimulation.name)
     ax = fig.gca()
-    fig.set_label(PIDSimulation.name)
 
     hist_t = np.arange(0, max_time, exerciser.DELTA)
     hist_x, hist_vx, hist_F = [], [], []
     # hist_extra = {}
     sim = PIDSimulation(copy.deepcopy(pid), params)
-    for t in hist_t:
-        try:
-            sim.tick(DELTA)
-        except (exerciser.CodeRunError, exerciser.ValidationError):
-            ax.set_xlabel(f"Error simulating solution at t = {t:.2f}", color="red", loc='right')
-            break
+    for _ in hist_t:
+        sim.tick(DELTA)
         # initial_len = len(hist_x)
         hist_x.append(sim.x)
         hist_vx.append(sim.vx)
@@ -190,10 +198,17 @@ def visualize(pid: PID, exercise: int | Params, max_time = 30, interactive_figur
         # Calling fig.show instead works as well and might be more general, but causes the figure to appear multiple times in interactive mode (ipympl backend is in interactive mode by default).
         # TODO: What exactly is the difference between show and draw_idle? Is there any need to call show here?
         fig.canvas.draw_idle()
-        # TODO: Should we disable the Pygame visualization here? It is probably not very useful with the interactive graph.
     else:
         plt.show()
-        exerciser.run(PIDSimulation(pid, params))
+
+def visualize(pid: PID, params: ExerciseParams):
+    """
+    Simulate and visualize the behavior of the given PID controller.
+
+    Shows an interactive view of the simulation in a Pygame window.
+    """
+
+    exerciser.run(PIDSimulation(copy.deepcopy(pid), params))
 
 if __name__ == '__main__':
     raise RuntimeError("Do not run this file directly. Instead call the simulate(..) function from this module in your solution.")
