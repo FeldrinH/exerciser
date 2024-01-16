@@ -3,6 +3,8 @@ from IPython.display import display
 from IPython.core.getipython import get_ipython
 import matplotlib.pyplot as plt
 
+# This is a fairly dirty hack. In particular autoshow using IPython events is a very questionable approach.
+# TODO: Maybe this should be removed in favor of only supporting one backend?
 def show_interactive(figure: Figure):
     """
     Does whatever is necessary to redraw and show the figure without recreating it.
