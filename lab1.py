@@ -1,10 +1,8 @@
 import copy
-import inspect
 import math
 import numbers
 import random
-from typing import NamedTuple, Optional, Protocol, Union
-from matplotlib.figure import Figure
+from typing import NamedTuple, Protocol
 import matplotlib.pyplot as plt
 import numpy as np
 import exerciser
@@ -135,36 +133,38 @@ class PIDSimulation(exerciser.Simulation):
 #             raise ValueError(f"Cannot plot non-numeric value {value}")
 #         values[label] = (value, plot)
 
-def plot_and_visualize(pid: PID, params: ExerciseParams, max_time = 30, interactive_figure: Optional[Figure] = None):
+def plot_and_visualize(pid: PID, params: ExerciseParams, max_time = 30, interactive = False):
     """
     Convenience function to plot and visualize the behavior of the given PID controller with one function call.
 
     Equivalent to calling `plot` and `visualize`.
     """
-    plot(pid, params, max_time, interactive_figure)
+    plot(pid, params, max_time, interactive)
     visualize(pid, params)
 
 # Note: plot and visualize make a deep copy of the PID controller to avoid mutating the original value.
 # TODO: Is an automatic deep copy an antipatern?
 # TODO: Is there a meaningful risk that a student will create a PID class that breaks with deepcopy?
 
-def plot(pid: PID, params: ExerciseParams, max_time = 30, interactive_figure: Optional[Figure] = None):
+def plot(pid: PID, params: ExerciseParams, max_time = 30, interactive = False):
     """
     Simulate and plot the behavior of the given PID controller.
 
     Shows a matplotlib plot with the values of some relevant variables over time (block position `x`, velocity `vx` and PID controller applied force `F`).
 
-    Passing `interactive_figure` enables interactive mode. The graph wil be drawn into the provided figure, instead of creating a new figure.
+    `interactive` enables interactive mode. In interactive mode the same figure will be redrawn with new data instead of creating a new figure.
+    This is meant to be used with `ipywidgets.interact`.
     """
 
-    if interactive_figure is not None:
-        fig = interactive_figure
-        # TODO: Clearing resets zoom. Is there a way to update data on existing lines without lots of extra code?
-        fig.clear()
+    if interactive:
+        # TODO: Clearing resets zoom (only relevant with widget backend). Is there a way to update data on existing lines without lots of extra code?
+        with plt.ioff():
+            fig = plt.figure(f"{PIDSimulation.name} - Interactive", clear=True)
+        fig = fig # type: ignore
     else:
-        # Creating a new plot every time will eventually hurt performance when using the ipympl backend.
-        # Closing the previous plot prevents drawing multiple interactive plots with this function.
-        # TODO: Is there a way to avoid performance issues while still allowing more than one plot to be active at the same time?
+        # Creating a new plot every time will eventually hurt performance when using the widget backend.
+        # Closing the previous plot prevents drawing multiple interactive plots with this function (only relevant with widget backend).
+        # TODO: Is there a way to avoid performance issues while still allowing more than one plot to be interactive at the same time?
         plt.close(PIDSimulation.name)
         fig = plt.figure(PIDSimulation.name)
     ax = fig.gca()
@@ -194,10 +194,8 @@ def plot(pid: PID, params: ExerciseParams, max_time = 30, interactive_figure: Op
     #     ax.plot(hist_t[:len(v)], v, label=k)
     ax.legend()
 
-    if interactive_figure is not None:
-        # Calling fig.show instead works as well and might be more general, but causes the figure to appear multiple times in interactive mode (ipympl backend is in interactive mode by default).
-        # TODO: What exactly is the difference between show and draw_idle? Is there any need to call show here?
-        fig.canvas.draw_idle()
+    if interactive:
+        exerciser.matplotlib.show_interactive(fig)
     else:
         plt.show()
 
