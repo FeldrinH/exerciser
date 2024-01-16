@@ -19,6 +19,9 @@ def show_interactive(figure: Figure):
     else:
         # Other (common) backends redraw automatically in interactive mode, but might not show the figure unless plt.show is called.
         # We automatically call plt.show once cell execution has completed.
+        # Note: When using the `widget` backend this assumes that the given figure is the only active figure.
+        # plt.show only shows the last active figure with the `widget` backend.
+        # TODO: Explicitly display this specific figure to support multiple figures.
         autoshow()
 
 _autoshow_queued = False
