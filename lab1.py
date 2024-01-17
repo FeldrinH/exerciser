@@ -2,7 +2,8 @@ import copy
 import math
 import numbers
 import random
-from typing import NamedTuple, Protocol
+from typing import NamedTuple, Protocol, Optional
+from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import numpy as np
 import exerciser
@@ -133,20 +134,20 @@ class PIDSimulation(exerciser.Simulation):
 #             raise ValueError(f"Cannot plot non-numeric value {value}")
 #         values[label] = (value, plot)
 
-def plot_and_visualize(pid: PID, params: ExerciseParams, max_time = 30, interactive = False):
+def plot_and_visualize(pid: PID, params: ExerciseParams, max_time = 30, figure: Optional[Figure] = None):
     """
     Convenience function to plot and visualize the behavior of the given PID controller with one function call.
 
     Equivalent to calling `plot` and `visualize`.
     """
-    plot(pid, params, max_time, interactive)
+    plot(pid, params, max_time, figure)
     visualize(pid, params)
 
 # Note: plot and visualize make a deep copy of the PID controller to avoid mutating the original value.
 # TODO: Is an automatic deep copy an antipatern?
 # TODO: Is there a meaningful risk that a student will create a PID class that breaks with deepcopy?
 
-def plot(pid: PID, params: ExerciseParams, max_time = 30, interactive = False):
+def plot(pid: PID, params: ExerciseParams, max_time = 30, figure: Optional[Figure] = None):
     """
     Simulate and plot the behavior of the given PID controller.
 
@@ -161,13 +162,10 @@ def plot(pid: PID, params: ExerciseParams, max_time = 30, interactive = False):
     # TODO: Track https://github.com/matplotlib/ipympl/issues/171, https://github.com/matplotlib/ipympl/issues/60 and https://github.com/matplotlib/ipympl/issues/4.
     # Update workarounds if/when these issues get resolved.
 
-    if interactive:
+    if figure is not None:
         # TODO: Clearing resets zoom (only relevant with widget backend). Is there a way to update data on existing lines without lots of extra code?
-        # TODO: Reusing the same plot makes all interactive plots share the same data. Is there a way to fix this without having to manually pass in a figure or figure id?
-        with plt.ioff():
-            fig = plt.figure(f"{PIDSimulation.name} - Interactive", clear=True)
-        # TODO: Pylance reports `fig` as possibly unbound due to a type checking limitation. Remove this workaround once https://github.com/matplotlib/matplotlib/issues/27659 is resolved.
-        fig = fig # type: ignore
+        fig = figure
+        fig.clear()
     else:
         # Creating a new plot every time will eventually hurt performance when using the widget backend.
         # Closing the previous plot prevents drawing multiple interactive plots with this function (only relevant with widget backend).
@@ -200,11 +198,6 @@ def plot(pid: PID, params: ExerciseParams, max_time = 30, interactive = False):
     # for k, v in hist_extra.items():
     #     ax.plot(hist_t[:len(v)], v, label=k)
     ax.legend()
-
-    if interactive:
-        exerciser.matplotlib.show_interactive(fig)
-    else:
-        plt.show()
 
 def visualize(pid: PID, params: ExerciseParams):
     """
