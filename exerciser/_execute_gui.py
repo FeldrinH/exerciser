@@ -45,6 +45,7 @@ def show_simulation_value(label: str, value: Any):
     if values is not None:
         values.append(f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}")
 
+# TODO: The optional error parameter is currently unused and its behaviour could be replicated in user code. Maybe remove it.
 def run(simulation: Simulation, error: Optional[BaseException] = None):
     """
     Runs provided `simulation` in a Pygame window. If `error` is provided behaves as if the error was raised by the exercise on the first tick.
@@ -69,9 +70,6 @@ def run(simulation: Simulation, error: Optional[BaseException] = None):
         tk_pygame_compat_warning = 'matplotlib is using the Tk backend. Tk has compatibility issues with Pygame that may cause Python to crash. Using a different matplotlib backend is recommended.'
         warnings.warn(tk_pygame_compat_warning, RuntimeWarning)
 
-    threading.Thread(target=_run, args=(simulation, error)).start()
-
-def _run(simulation: Simulation, error: Optional[BaseException] = None):
     global _simulation, _initialized
 
     # TODO: It might be necessary to add more locking for thread safety.
@@ -81,54 +79,60 @@ def _run(simulation: Simulation, error: Optional[BaseException] = None):
         _simulation = simulation
     else:
         _simulation = ErrorProxySimulation(simulation, error)
-    del simulation, error # Unbind to avoid accidentally using the initial exercise value and allow GC
 
     with _lock:
         if _initialized:
             return
         _initialized = True
-    
-    running = True
 
-    # TODO: Moving Pygame into a separate thread has broken matplotlib compatibility outside of interactive notebooks.
-    # See comments labeled with 'Matplotlib compatibility' for specific issues.
+    threading.Thread(target=_run).start()
 
-    # TODO: Matplotlib compatibility: When Pygame closes, it should probably close all the matplotlib figures as well.
-    # When matplotlib closes, it should close the Pygame window.
-    # Note that matplotlib figures could be created after Pygame has started.
-
-    last_message = ""
-    last_message_color = "black"
-    last_message_hide = 0
-
-    def show_message(message: str, message_color, message_duration_ms: Optional[int]):
-        nonlocal last_message, last_message_color, last_message_hide
-        print(message)
-        last_message = message
-        last_message_color = message_color
-        last_message_hide = pygame.time.get_ticks() + message_duration_ms if message_duration_ms is not None else None
-    
-    def clear_message():
-        nonlocal last_message_hide
-        last_message_hide = 0
-
-    pygame.display.init()
-    pygame.font.init()
-    screen = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
-    pygame.display.set_caption(_simulation.name)
-    clock = pygame.time.Clock()
-    variables_font = pygame.font.SysFont('Arial', 20)
-
-    values_to_draw, user_values_to_draw = [], []
-    _values_to_draw.set(values_to_draw)
-    _user_values_to_draw.set(user_values_to_draw)
-
-    tick = 0
-    show_fps = False
-
-    last_invalid_simulation = None
+def _run():
+    global _initialized
 
     try:
+        assert _simulation is not None
+
+        running = True
+
+        # TODO: Moving Pygame into a separate thread has broken matplotlib compatibility outside of interactive notebooks.
+        # See comments labeled with 'Matplotlib compatibility' for specific issues.
+
+        # TODO: Matplotlib compatibility: When Pygame closes, it should probably close all the matplotlib figures as well.
+        # When matplotlib closes, it should close the Pygame window.
+        # Note that matplotlib figures could be created after Pygame has started.
+
+        last_message = ""
+        last_message_color = "black"
+        last_message_hide = 0
+
+        def show_message(message: str, message_color, message_duration_ms: Optional[int]):
+            nonlocal last_message, last_message_color, last_message_hide
+            print(message)
+            last_message = message
+            last_message_color = message_color
+            last_message_hide = pygame.time.get_ticks() + message_duration_ms if message_duration_ms is not None else None
+        
+        def clear_message():
+            nonlocal last_message_hide
+            last_message_hide = 0
+
+        pygame.display.init()
+        pygame.font.init()
+        screen = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
+        pygame.display.set_caption(_simulation.name)
+        clock = pygame.time.Clock()
+        variables_font = pygame.font.SysFont('Arial', 20)
+
+        values_to_draw, user_values_to_draw = [], []
+        _values_to_draw.set(values_to_draw)
+        _user_values_to_draw.set(user_values_to_draw)
+
+        tick = 0
+        show_fps = False
+
+        last_invalid_simulation = None
+
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -140,7 +144,7 @@ def _run(simulation: Simulation, error: Optional[BaseException] = None):
 
             simulation = _simulation
 
-            if simulation is not None and simulation is not last_invalid_simulation:
+            if simulation is not last_invalid_simulation:
                 if last_invalid_simulation is not None:
                     # Clear previous error.
                     clear_message()
@@ -164,8 +168,7 @@ def _run(simulation: Simulation, error: Optional[BaseException] = None):
             if show_fps:
                 values_to_draw.append(f"FPS: {clock.get_fps():.2f}")
 
-            if simulation is not None:
-                simulation.draw(screen)
+            simulation.draw(screen)
 
             # Output variable values
             for i, value in enumerate(values_to_draw):
