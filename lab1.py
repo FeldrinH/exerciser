@@ -30,17 +30,18 @@ def get_exercise_params(exercise: int) -> ExerciseParams:
     """
 
     if exercise == 1:
-        return ExerciseParams(100, 0)
+        return ExerciseParams(1, 0)
     elif exercise == 2:
-        return ExerciseParams(100, 30)
+        return ExerciseParams(1, 30)
     elif exercise == 3:
-        return ExerciseParams(random.uniform(-200, 200), random.uniform(-60, 60))
+        return ExerciseParams(random.uniform(-2, 2), random.uniform(-60, 60))
     elif exercise == 4:
-        return ExerciseParams(random.uniform(-200, 200), random.uniform(-60, 60), noise=1.0, seed=random.getrandbits(64))
+        return ExerciseParams(random.uniform(-2, 2), random.uniform(-60, 60), noise=0.01, seed=random.getrandbits(64))
     else:
         raise exerciser.ValidationError(f"Unknown exercise number: {exercise}")
 
-_GRAVITY = 50 # Effective gravitational acceleration (cm/s^2)
+_GRAVITY = 1 # Effective gravitational acceleration (m/s^2)
+_SCALE = 150 # Scale (1 meter = _SCALE pixels)
 
 # # Thread-local variable for storing reference to dictionary where user-shown values are stored.
 # _collection_target: ContextVar[Optional[Dict]] = ContextVar('collected_values', default=None)
@@ -68,7 +69,7 @@ class PIDSimulation(exerciser.Simulation):
         self._random = random.Random(params.seed)
         self._gravity = math.sin(math.radians(self.angle)) * _GRAVITY
         self._friction = math.cos(math.radians(self.angle)) * _GRAVITY * 0.01
-        rect = pygame.Surface((30, 23))
+        rect = pygame.Surface((40, 30))
         rect.set_colorkey("black")
         rect.fill("red")
         self._rect = pygame.transform.rotate(rect, -self.angle)
@@ -83,7 +84,7 @@ class PIDSimulation(exerciser.Simulation):
             # TODO: Show actual returned value?
             raise exerciser.ValidationError("Error simulating solution: Control method did not return a number")
 
-        self.F = min(max(control_return, -100), 100)       
+        self.F = min(max(control_return, -2), 2)       
 
         # TODO: Add friction?
 
@@ -107,9 +108,9 @@ class PIDSimulation(exerciser.Simulation):
 
         exerciser.show_simulation_value("α", f"{self.angle:.1f}°")
         exerciser.show_simulation_value("t", f"{self.t:.2f} s")
-        exerciser.show_simulation_value("x", f"{self.x:.2f} cm")
-        exerciser.show_simulation_value("vx", f"{self.vx:.2f} cm/s")
-        exerciser.show_simulation_value("F", f"{self.F:.2f} cN")
+        exerciser.show_simulation_value("x", f"{self.x:.3f} m")
+        exerciser.show_simulation_value("vx", f"{self.vx:.3f} m/s")
+        exerciser.show_simulation_value("F", f"{self.F:.3f} N")
 
         up_axis = pygame.Vector2(0, -1)
         up_axis.rotate_ip(self.angle)
@@ -118,20 +119,20 @@ class PIDSimulation(exerciser.Simulation):
 
         exerciser.pygame.draw_dashed_line(screen, "gray", center + screen.get_height() * up_axis, center - screen.get_height() * up_axis, pattern=(10, 8))
 
-        mass_center = center + self.x * right_axis
+        mass_center = center + self.x * _SCALE * right_axis
         rect_bounds = self._rect.get_rect()
         rect_bounds.center = (int(mass_center.x), int(mass_center.y))
         screen.blit(self._rect, rect_bounds)
-        floor_center = center - 11 * up_axis
+        floor_center = center - 14 * up_axis
         pygame.draw.line(screen, "orange", floor_center + screen.get_width() * right_axis, floor_center - screen.get_width() * right_axis, width=2)
 
         # exerciser.pygame.draw_arrow(screen, "purple", mass_center, self._gravity * right_axis, 1)
         if self._applied_friction != 0.0:
-            exerciser.pygame.draw_arrow(screen, "purple", mass_center, self._applied_friction * right_axis, 1)
-        exerciser.pygame.draw_arrow(screen, "purple", mass_center, (0, _GRAVITY), 1)
-        exerciser.pygame.draw_arrow(screen, "green3", mass_center, self.vx * right_axis, 2)
+            exerciser.pygame.draw_arrow(screen, "purple", mass_center, self._applied_friction * _SCALE * right_axis, 1)
+        exerciser.pygame.draw_arrow(screen, "purple", mass_center, (0, _GRAVITY * _SCALE), 1)
+        exerciser.pygame.draw_arrow(screen, "green3", mass_center, self.vx * _SCALE * right_axis, 2)
         if not math.isnan(self.F):
-            exerciser.pygame.draw_arrow(screen, "blue", mass_center, self.F * right_axis, 2)
+            exerciser.pygame.draw_arrow(screen, "blue", mass_center, self.F * _SCALE * right_axis, 2)
 
 # TODO: Some kind of method to simulate and find stabilization time?
 
@@ -185,11 +186,11 @@ def plot(pid: PID, params: ExerciseParams, max_time = 30, figure: Optional[Figur
         hist_vx.append(sim.vx)
         hist_F.append(sim.F)
     ax.axhline(y=0.0, lw=0.8, ls='--', color="darkgrey")
-    ax.plot(hist_t[:len(hist_F)], hist_F, label="F (cN)", color="blue")
+    ax.plot(hist_t[:len(hist_F)], hist_F, label="F (N)", color="blue")
     if params.noise != 0.0:
         ax.plot(hist_t[:len(hist_m_x)], hist_m_x, label="", color="orange", ls='', marker='o', ms=1)
-    ax.plot(hist_t[:len(hist_x)], hist_x, label="x (cm)", color="red")
-    ax.plot(hist_t[:len(hist_vx)], hist_vx, label="vx (cm/s)", color="green")
+    ax.plot(hist_t[:len(hist_x)], hist_x, label="x (m)", color="red")
+    ax.plot(hist_t[:len(hist_vx)], hist_vx, label="vx (m/s)", color="green")
     ax.set_xlabel('time (s)')
     ax.legend()
 
