@@ -3,7 +3,7 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 from contextvars import ContextVar
 import threading
 import warnings
-from typing import Any, Final, List, Optional
+from typing import Any, Final, Optional
 import traceback
 import matplotlib
 import pygame
@@ -30,8 +30,8 @@ _lock = threading.Lock()
 
 _simulation: Optional[Simulation] = None
 _initialized = False
-_values_to_draw: ContextVar[Optional[List[str]]] = ContextVar('values', default=None)
-_user_values_to_draw: ContextVar[Optional[List[str]]] = ContextVar('user_values', default=None)
+_values_to_draw: ContextVar = ContextVar('values', default=None)
+_user_values_to_draw: ContextVar = ContextVar('user_values', default=None)
 
 def show_value(label: str, value: Any):
     """Show a user-supplied value on screen for debugging purposes"""
