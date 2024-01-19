@@ -19,7 +19,6 @@ classifiers = [
 dependencies=[
     "pygame==2.*",
     "matplotlib==3.*",
-    "ipython==8.*",
 ]
 
 [project.urls]

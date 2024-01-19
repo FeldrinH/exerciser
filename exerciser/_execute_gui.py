@@ -5,7 +5,7 @@ import threading
 import warnings
 from typing import Any, Final, List, Optional
 import traceback
-import matplotlib._pylab_helpers
+import matplotlib
 import pygame
 from ._shared import CodeRunError, Simulation, ValidationError
 
