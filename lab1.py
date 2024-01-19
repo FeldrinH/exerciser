@@ -18,8 +18,10 @@ class PID(Protocol):
         ...
 
 class ExerciseParams(NamedTuple):
-    x: float
-    angle: float
+    x: float # Starting position (cm)
+    angle: float # Surface angle (degrees)
+    noise: float = 0.0 # Sensor noise (normal distribution standard deviation, cm)
+    seed: int = 0 # RNG seed (only used with sensor noise)
 
 def get_exercise_params(exercise: int) -> ExerciseParams:
     """
@@ -33,10 +35,12 @@ def get_exercise_params(exercise: int) -> ExerciseParams:
         return ExerciseParams(100, 30)
     elif exercise == 3:
         return ExerciseParams(random.uniform(-200, 200), random.uniform(-60, 60))
+    elif exercise == 4:
+        return ExerciseParams(random.uniform(-200, 200), random.uniform(-60, 60), noise=1.0, seed=random.getrandbits(64))
     else:
         raise exerciser.ValidationError(f"Unknown exercise number: {exercise}")
 
-_GRAVITY = 50 # Effective gravitational acceleration: 50 px/s^2
+_GRAVITY = 50 # Effective gravitational acceleration (cm/s^2)
 
 # # Thread-local variable for storing reference to dictionary where user-shown values are stored.
 # _collection_target: ContextVar[Optional[Dict]] = ContextVar('collected_values', default=None)
@@ -54,32 +58,25 @@ class PIDSimulation(exerciser.Simulation):
         if not isinstance(params, ExerciseParams):
             raise exerciser.ValidationError(f"Expected exercise parameters, got {params}. (Call get_exercise_params(..) to get a exercise parameters.)")
 
-        self.x, self.angle = params
+        self.x, self.angle, self.noise, _ = params
+        self.measured_x = self.x
         self.pid = pid
         # # Values passed to `show_value(..)` inside `pid.control(..)` are collected to `_collected_values`, if `collect` is true.
         # self._collect = collect
         # self._collected_values: Dict[str, Tuple[float, bool]] = {}
 
-        self._gravity = math.sin(math.radians(self.angle)) * _GRAVITY 
+        self._random = random.Random(params.seed)
+        self._gravity = math.sin(math.radians(self.angle)) * _GRAVITY
         rect = pygame.Surface((30, 23))
         rect.set_colorkey("black")
         rect.fill("red")
         self._rect = pygame.transform.rotate(rect, -self.angle)
 
     def tick(self, delta: float):
-        # # Start collecting values to `_collected_values`
-        # if self._collect:
-        #     self._collected_values.clear()
-        #     _collection_target.set(self._collected_values)
-        # Run PID controller `control` method
         try:
-            control_return = self.pid.control(delta, self.x)
+            control_return = self.pid.control(delta, self.measured_x)
         except Exception as err:
             raise exerciser.CodeRunError("Error running control method") from err
-        # finally:
-        #     # Stop collecting values to `_collected_values`
-        #     if self._collect:
-        #         _collection_target.set(None)
 
         if not isinstance(control_return, numbers.Real):
             # TODO: Show actual returned value?
@@ -87,23 +84,24 @@ class PIDSimulation(exerciser.Simulation):
 
         self.F = min(max(control_return, -100), 100)       
 
+        # TODO: Add friction?
+
         self.t += delta
         # TODO: Is silently ignoring NaN bad?
         self.vx += ((0 if math.isnan(self.F) else self.F) + self._gravity) * delta
         self.x += self.vx * delta
+        self.measured_x = self.x
+        if self.noise != 0.0:
+            self.measured_x += self._random.gauss(0.0, self.noise)
 
     def draw(self, screen: pygame.Surface):
-        exerciser.show_simulation_value("α", f"{self.angle:.1f}°")
-        exerciser.show_simulation_value("t", f"{self.t:.2f}")
-        exerciser.show_simulation_value("x", f"{self.x:.2f}")
-        exerciser.show_simulation_value("vx", f"{self.vx:.2f}")
-        exerciser.show_simulation_value("F", f"{self.F:.2f}")
+        # Scale 1 pixel = 1 cm
 
-        # for k, (v, _) in self._collected_values.items():
-        #     if isinstance(v, float):
-        #         exerciser.pygame.show_value(f"{k} = {v:.2f}")
-        #     else:
-        #         exerciser.pygame.show_value(f"{k} = {v}")
+        exerciser.show_simulation_value("α", f"{self.angle:.1f}°")
+        exerciser.show_simulation_value("t", f"{self.t:.2f} s")
+        exerciser.show_simulation_value("x", f"{self.x:.2f} cm")
+        exerciser.show_simulation_value("vx", f"{self.vx:.2f} cm/s")
+        exerciser.show_simulation_value("F", f"{self.F:.2f} cN")
 
         up_axis = pygame.Vector2(0, -1)
         up_axis.rotate_ip(self.angle)
@@ -126,13 +124,6 @@ class PIDSimulation(exerciser.Simulation):
             exerciser.pygame.draw_arrow(screen, "blue", mass_center, self.F * right_axis, 2)
 
 # TODO: Some kind of method to simulate and find stabilization time?
-
-# def show_value(label: str, value: Any, plot = False):
-#     values = _collection_target.get()
-#     if values is not None:
-#         if plot and not isinstance(value, numbers.Real):
-#             raise ValueError(f"Cannot plot non-numeric value {value}")
-#         values[label] = (value, plot)
 
 def plot_and_visualize(pid: PID, params: ExerciseParams, max_time = 30, figure: Optional[Figure] = None):
     """
@@ -175,28 +166,21 @@ def plot(pid: PID, params: ExerciseParams, max_time = 30, figure: Optional[Figur
     ax = fig.gca()
 
     hist_t = np.arange(0, max_time, exerciser.DELTA)
-    hist_x, hist_vx, hist_F = [], [], []
-    # hist_extra = {}
+    hist_x, hist_m_x, hist_vx, hist_F = [], [], [], []
     sim = PIDSimulation(copy.deepcopy(pid), params)
     for _ in hist_t:
         sim.tick(DELTA)
-        # initial_len = len(hist_x)
         hist_x.append(sim.x)
+        hist_m_x.append(sim.measured_x)
         hist_vx.append(sim.vx)
         hist_F.append(sim.F)
-        # for k, (v, plot) in presimulate_exercise._collected_values.items():
-        #     if plot:
-        #         data = hist_extra.setdefault(k, [])
-        #         if len(data) < initial_len:
-        #             data += [math.nan] * initial_len
-        #         data.append(v)
     ax.axhline(y=0.0, lw=0.8, ls='--', color="darkgrey")
-    ax.plot(hist_t[:len(hist_x)], hist_x, label="x", color="red")
-    ax.plot(hist_t[:len(hist_vx)], hist_vx, label="vx", color="green")
-    ax.plot(hist_t[:len(hist_F)], hist_F, label="F", color="blue")
-    # ax.set_prop_cycle(color=["c", "m", "y", "orange", "brown"])
-    # for k, v in hist_extra.items():
-    #     ax.plot(hist_t[:len(v)], v, label=k)
+    ax.plot(hist_t[:len(hist_F)], hist_F, label="F (cN)", color="blue")
+    if params.noise != 0.0:
+        ax.plot(hist_t[:len(hist_m_x)], hist_m_x, label="", color="orange", ls='', marker='o', ms=1)
+    ax.plot(hist_t[:len(hist_x)], hist_x, label="x (cm)", color="red")
+    ax.plot(hist_t[:len(hist_vx)], hist_vx, label="vx (cm/s)", color="green")
+    ax.set_xlabel('time (s)')
     ax.legend()
 
 def visualize(pid: PID, params: ExerciseParams):
