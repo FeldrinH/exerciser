@@ -67,6 +67,7 @@ class PIDSimulation(exerciser.Simulation):
 
         self._random = random.Random(params.seed)
         self._gravity = math.sin(math.radians(self.angle)) * _GRAVITY
+        self._friction = math.cos(math.radians(self.angle)) * _GRAVITY * 0.01
         rect = pygame.Surface((30, 23))
         rect.set_colorkey("black")
         rect.fill("red")
@@ -89,6 +90,13 @@ class PIDSimulation(exerciser.Simulation):
         self.t += delta
         # TODO: Is silently ignoring NaN bad?
         self.vx += ((0 if math.isnan(self.F) else self.F) + self._gravity) * delta
+        # TODO: Replace friction with drag (proportional to velocity)?
+        if abs(self.vx) < self._friction * delta:
+            self._applied_friction = 0.0
+            self.vx = 0.0
+        else:
+            self._applied_friction = math.copysign(self._friction, -self.vx)
+            self.vx += self._applied_friction * delta
         self.x += self.vx * delta
         self.measured_x = self.x
         if self.noise != 0.0:
@@ -118,6 +126,8 @@ class PIDSimulation(exerciser.Simulation):
         pygame.draw.line(screen, "orange", floor_center + screen.get_width() * right_axis, floor_center - screen.get_width() * right_axis, width=2)
 
         # exerciser.pygame.draw_arrow(screen, "purple", mass_center, self._gravity * right_axis, 1)
+        if self._applied_friction != 0.0:
+            exerciser.pygame.draw_arrow(screen, "purple", mass_center, self._applied_friction * right_axis, 1)
         exerciser.pygame.draw_arrow(screen, "purple", mass_center, (0, _GRAVITY), 1)
         exerciser.pygame.draw_arrow(screen, "green3", mass_center, self.vx * right_axis, 2)
         if not math.isnan(self.F):
