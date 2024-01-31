@@ -49,9 +49,6 @@ def show_simulation_value(label: str, value: Any):
 def run(simulation: Simulation, error: Optional[BaseException] = None):
     """
     Runs provided `simulation` in a Pygame window. If `error` is provided behaves as if the error was raised by the exercise on the first tick.
-
-    Yields time to matplotlib windows for processing events and updating plots, if any exist.
-    This allows it to run at the same time as matplotlib without issues.
     """
 
     if matplotlib.get_backend().casefold() == 'tkagg':
