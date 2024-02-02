@@ -6,6 +6,8 @@ Coordinate = Union[Tuple[float, float], Sequence[float], pygame.Vector2]
 RGBAOutput = Tuple[int, int, int, int]
 ColorValue = Union[pygame.Color, int, str, Tuple[int, int, int], RGBAOutput, Sequence[int]]
 
+# TODO: Make these functions use anti-aliasing so the lines look nicer.
+
 def draw_dashed_line(surface: pygame.Surface, color: ColorValue, start: Coordinate, end: Coordinate, pattern: Tuple[int, int], width: int = 1):
     axis = pygame.Vector2(end) - pygame.Vector2(start)
     length = axis.length()
