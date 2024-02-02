@@ -3,11 +3,15 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 from contextvars import ContextVar
 import threading
 import warnings
-from typing import Any, Final, Optional
+from typing import Any, Final, Optional, Sequence, Tuple, Union
 import traceback
 import matplotlib
 import pygame
 from ._shared import CodeRunError, Simulation, ValidationError
+
+# Types copied from pygame/_common.pyi
+RGBAOutput = Tuple[int, int, int, int]
+ColorValue = Union[pygame.Color, int, str, Tuple[int, int, int], RGBAOutput, Sequence[int]]
 
 TPS: Final[int] = 60
 """Default tick rate in ticks per second (equal to 1 / DELTA ignoring rounding error)"""
@@ -39,11 +43,11 @@ def show_value(label: str, value: Any):
     if values is not None:
         values.append(f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}")
 
-def show_simulation_value(label: str, value: Any):
+def show_simulation_value(label: str, value: Any, color: ColorValue = 'black'):
     """Show an simulation-specific value on screen for informational/debugging purposes"""
     values = _values_to_draw.get()
     if values is not None:
-        values.append(f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}")
+        values.append((f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}", color))
 
 # TODO: The optional error parameter is currently unused and its behaviour could be replicated in user code. Maybe remove it.
 def run(simulation: Simulation, error: Optional[BaseException] = None):
@@ -100,7 +104,7 @@ def _run():
         # Note that matplotlib figures could be created after Pygame has started.
 
         last_message = ""
-        last_message_color = "black"
+        last_message_color = 'black'
         last_message_hide = 0
 
         def show_message(message: str, message_color, message_duration_ms: Optional[int]):
@@ -154,13 +158,13 @@ def _run():
                 except CodeRunError as e:
                     cause = e.__cause__ or e.__context__
                     if cause is None:
-                        show_message(f"{e}: <unknown cause>", "red", None)
+                        show_message(f"{e}: <unknown cause>", 'red', None)
                     else:
-                        show_message(f"{e}: {type(cause).__name__}: {cause}", "red", None)
+                        show_message(f"{e}: {type(cause).__name__}: {cause}", 'red', None)
                         traceback.print_exception(cause)
                     last_invalid_simulation = simulation
 
-            screen.fill("white")
+            screen.fill('white')
 
             if show_fps:
                 values_to_draw.append(f"FPS: {clock.get_fps():.2f}")
@@ -168,12 +172,12 @@ def _run():
             simulation.draw(screen)
 
             # Output variable values
-            for i, value in enumerate(values_to_draw):
-                variables_text_surface = variables_font.render(value, True, "black")
+            for i, (value, color) in enumerate(values_to_draw):
+                variables_text_surface = variables_font.render(value, True, color)
                 screen.blit(variables_text_surface, (5, i * 25))
             user_values_start = len(values_to_draw) * 25 + 5
             for i, value in enumerate(user_values_to_draw):
-                variables_text_surface = variables_font.render(value, True, "black")
+                variables_text_surface = variables_font.render(value, True, 'black')
                 screen.blit(variables_text_surface, (5, user_values_start + i * 25))
             values_to_draw.clear()
             user_values_to_draw.clear()
