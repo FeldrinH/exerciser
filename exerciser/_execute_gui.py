@@ -3,7 +3,7 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 from contextvars import ContextVar
 import threading
 import warnings
-from typing import Any, Final, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Final, Optional, Sequence, Tuple, Union
 import traceback
 import matplotlib
 import pygame
@@ -18,20 +18,9 @@ TPS: Final[int] = 60
 DELTA: Final[float] = 1 / TPS
 """Default time delta between ticks in seconds (equal to 1 / TPS)"""
 
-class ErrorProxySimulation:
-    def __init__(self, simulation: Simulation, error: BaseException) -> None:
-        self.name = simulation.name
-        self.simulation = simulation
-        self.error = error
-    
-    def tick(self, _):
-        raise self.error
-
-    def draw(self, surface):
-        self.simulation.draw(surface)
-
 _lock = threading.Lock()
 
+_create_simulation: Optional[Callable[[], Simulation]] = None
 _simulation: Optional[Simulation] = None
 _initialized = False
 _values_to_draw: ContextVar = ContextVar('values', default=None)
@@ -49,10 +38,11 @@ def show_simulation_value(label: str, value: Any, color: ColorValue = 'black'):
     if values is not None:
         values.append((f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}", color))
 
-# TODO: The optional error parameter is currently unused and its behaviour could be replicated in user code. Maybe remove it.
-def run(simulation: Simulation, error: Optional[BaseException] = None):
+def run(create_simulation: Callable[[], Simulation]):
     """
-    Runs provided `simulation` in a Pygame window. If `error` is provided behaves as if the error was raised by the exercise on the first tick.
+    Calls `create_simulation` to create a simulation object. Runs the obtained simulation in a Pygame window.
+    
+    Note: `create_simulation` may be called more than once to restart the simulation. It should return a new simulation object every time.
     """
 
     if matplotlib.get_backend().casefold() == 'tkagg':
@@ -71,16 +61,13 @@ def run(simulation: Simulation, error: Optional[BaseException] = None):
         tk_pygame_compat_warning = 'matplotlib is using the Tk backend. Tk has compatibility issues with Pygame that may cause Python to crash. Using a different matplotlib backend is recommended.'
         warnings.warn(tk_pygame_compat_warning, RuntimeWarning)
 
-    global _simulation, _initialized
+    global _create_simulation, _simulation, _initialized
 
     # TODO: It might be necessary to add more locking for thread safety.
     # Simple assignment is atomic on current CPython but that is not guaranteed for other implementations or future versions of CPython.
 
-    if error is None:
-        _simulation = simulation
-    else:
-        _simulation = ErrorProxySimulation(simulation, error)
-
+    _create_simulation = create_simulation
+    _simulation = create_simulation()
     with _lock:
         if _initialized:
             return
@@ -89,9 +76,10 @@ def run(simulation: Simulation, error: Optional[BaseException] = None):
     threading.Thread(target=_run).start()
 
 def _run():
-    global _initialized
+    global _simulation, _initialized
 
     try:
+        assert _create_simulation is not None
         assert _simulation is not None
 
         running = True
@@ -139,9 +127,10 @@ def _run():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_r:
+                        _simulation = _create_simulation()
                     if event.key == pygame.K_F1:
                         show_fps = not show_fps
-                    # TODO: Add some way to restart simulation without re-running code (for simulations with random initial state)?
 
             simulation = _simulation
 
