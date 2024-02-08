@@ -19,6 +19,12 @@ Exceptions thrown from `tick` or `draw` generally cause the window to close and 
 
 When any of these special error types are caught the system does not exit. Instead the error is shown on screen and the simulation is paused (`tick` is no longer called). Note that `draw` is still called even when the simulation is paused.
 
+There are some useful keybinds available in the simulation window:
+
+* R - restart the simulation
+* P - pause the simulation
+* S - step the simulation (advance by one frame; if not paused pauses the simulation)
+
 ## Minimum Python version
 
 This libarary should support Python 3.8 and above.
