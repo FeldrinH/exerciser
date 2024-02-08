@@ -23,6 +23,7 @@ _lock = threading.Lock()
 _create_simulation: Optional[Callable[[], Simulation]] = None
 _simulation: Optional[Simulation] = None
 _initialized = False
+_paused = False
 _values_to_draw: ContextVar = ContextVar('values', default=None)
 _user_values_to_draw: ContextVar = ContextVar('user_values', default=None)
 
@@ -33,7 +34,11 @@ def show_value(label: str, value: Any):
         values.append(f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}")
 
 def show_simulation_value(label: str, value: Any, color: ColorValue = 'black'):
-    """Show an simulation-specific value on screen for informational/debugging purposes"""
+    """
+    Show an simulation-specific value on screen for informational/debugging purposes.
+    
+    Note: This should be called inside `draw`, not inside `tick`.
+    """
     values = _values_to_draw.get()
     if values is not None:
         values.append((f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}", color))
@@ -76,7 +81,7 @@ def run(create_simulation: Callable[[], Simulation]):
     threading.Thread(target=_run).start()
 
 def _run():
-    global _simulation, _initialized
+    global _simulation, _initialized, _paused
 
     try:
         assert _create_simulation is not None
@@ -117,33 +122,49 @@ def _run():
         _values_to_draw.set(values_to_draw)
         _user_values_to_draw.set(user_values_to_draw)
 
+        _paused = False
+
         tick = 0
         show_fps = False
 
-        last_invalid_simulation = None
+        last_simulation = None
+        simulation_valid = True
 
         while running:
+            step = False
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
                         _simulation = _create_simulation()
+                    elif event.key == pygame.K_p:
+                        _paused = not _paused
+                    elif event.key == pygame.K_s:
+                        step = True
                     if event.key == pygame.K_F1:
                         show_fps = not show_fps
 
             simulation = _simulation
 
-            if simulation is not last_invalid_simulation:
-                if last_invalid_simulation is not None:
-                    # Clear previous error.
-                    clear_message()
+            values_to_draw.clear()
+
+            if simulation is not last_simulation:
+                last_simulation = simulation
+                simulation_valid = True
+                # Clear previous error and values
+                clear_message()
+                user_values_to_draw.clear()
+
+            if simulation_valid and (not _paused or step):
+                user_values_to_draw.clear()
                 try:
                     # Tick with fixed delta to ensure that simulation is as deterministic as possible
                     simulation.tick(DELTA)
                 except ValidationError as e:
                     show_message(f"{e}", "red", None)
-                    last_invalid_simulation = simulation
+                    simulation_valid = False
                 except CodeRunError as e:
                     cause = e.__cause__ or e.__context__
                     if cause is None:
@@ -151,7 +172,7 @@ def _run():
                     else:
                         show_message(f"{e}: {type(cause).__name__}: {cause}", 'red', None)
                         traceback.print_exception(cause)
-                    last_invalid_simulation = simulation
+                    simulation_valid = False
 
             screen.fill('white')
 
@@ -168,8 +189,6 @@ def _run():
             for i, value in enumerate(user_values_to_draw):
                 variables_text_surface = variables_font.render(value, True, 'black')
                 screen.blit(variables_text_surface, (5, user_values_start + i * 25))
-            values_to_draw.clear()
-            user_values_to_draw.clear()
 
             if last_message_hide is None or pygame.time.get_ticks() < last_message_hide:
                 message_text_surface = variables_font.render(last_message, True, last_message_color)
