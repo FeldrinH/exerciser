@@ -142,7 +142,10 @@ def _run():
                     elif event.key == pygame.K_p:
                         _paused = not _paused
                     elif event.key == pygame.K_s:
-                        step = True
+                        if _paused:
+                            step = True
+                        else:
+                            _paused = True
                     if event.key == pygame.K_F1:
                         show_fps = not show_fps
 
