@@ -116,7 +116,8 @@ def _run():
         screen = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
         pygame.display.set_caption(_simulation.name)
         clock = pygame.time.Clock()
-        variables_font = pygame.font.SysFont('Arial', 20)
+        # TODO: Find a font that looks nicer?
+        variables_font = pygame.font.Font(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'LiberationSans-Regular.ttf'), 20)
 
         values_to_draw, user_values_to_draw = [], []
         _values_to_draw.set(values_to_draw)
