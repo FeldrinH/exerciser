@@ -30,3 +30,23 @@ def draw_arrow(surface: pygame.Surface, color: ColorValue, start_pos: Coordinate
         dir_vec.normalize_ip()
     pygame.draw.line(surface, color, start_pos, end_pos_vec, width)
     pygame.draw.lines(surface, color, False, [end_pos_vec + dir_vec.rotate(140) * length, end_pos_vec, end_pos_vec + dir_vec.rotate(220) * length], width)
+
+def draw_spring(surface: pygame.Surface, color: ColorValue, start: Coordinate, end: Coordinate, coil_count: int, coil_width: int, width: int = 1):
+    axis = pygame.Vector2(end) - pygame.Vector2(start)
+    coil_height = axis.length() / (2 * coil_count)
+    axis.normalize_ip()
+    coil_line = pygame.Vector2(coil_height, coil_width).rotate(pygame.Vector2(1, 0).angle_to(axis))
+    coil_reverse_line = coil_line.reflect(pygame.Vector2(-axis.y, axis.x))
+
+    pos = pygame.Vector2(start)
+    pygame.draw.line(surface, color, pos, pos + 0.5 * coil_line, width)
+    pos += 0.5 * coil_line
+    pygame.draw.line(surface, color, pos, pos + coil_reverse_line, width)
+    pos += coil_reverse_line
+    for _ in range(coil_count - 1):
+        pygame.draw.line(surface, color, pos, pos + coil_line, width)
+        pos += coil_line
+        pygame.draw.line(surface, color, pos, pos + coil_reverse_line, width)
+        pos += coil_reverse_line
+    pygame.draw.line(surface, color, pos, pos + 0.5 * coil_line, width)
+    pos += 0.5 * coil_line
