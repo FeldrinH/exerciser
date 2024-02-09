@@ -180,9 +180,13 @@ def _run():
             screen.fill('white')
 
             if show_fps:
-                values_to_draw.append(f"FPS: {clock.get_fps():.2f}")
+                values_to_draw.append((f"FPS: {clock.get_fps():.2f}", 'black'))
 
             simulation.draw(screen)
+
+            if _paused:
+                paused_indicator_surface = variables_font.render('Paused', True, 'blue')
+                screen.blit(paused_indicator_surface, (screen.get_width() - paused_indicator_surface.get_width() - 5, 0))
 
             # Output variable values
             for i, (value, color) in enumerate(values_to_draw):
