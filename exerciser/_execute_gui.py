@@ -134,7 +134,8 @@ def _run():
         while running:
             step = False
 
-            for event in pygame.event.get():
+            # Do not pump events here, so that events are still available inside `tick`
+            for event in pygame.event.get(pump=False):
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
@@ -177,6 +178,9 @@ def _run():
                         show_message(f"{e}: {type(cause).__name__}: {cause}", 'red', None)
                         traceback.print_exception(cause)
                     simulation_valid = False
+
+            # Pump events here to ensure that the window remains responsive even if there is no event handling inside `tick`
+            pygame.event.pump()
 
             screen.fill('white')
 
