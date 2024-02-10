@@ -10,6 +10,8 @@ ColorValue = Union[pygame.Color, int, str, Tuple[int, int, int], RGBAOutput, Seq
 
 def draw_dashed_line(surface: pygame.Surface, color: ColorValue, start: Coordinate, end: Coordinate, pattern: Tuple[int, int], width: int = 1):
     axis = pygame.Vector2(end) - pygame.Vector2(start)
+    if axis.length_squared() == 0.0:
+        return
     length = axis.length()
     axis.normalize_ip()
 
@@ -33,6 +35,8 @@ def draw_arrow(surface: pygame.Surface, color: ColorValue, start_pos: Coordinate
 
 def draw_spring(surface: pygame.Surface, color: ColorValue, start: Coordinate, end: Coordinate, coil_count: int, coil_width: int, end_length = 5, width: int = 1):
     axis = pygame.Vector2(end) - pygame.Vector2(start)
+    if axis.length_squared() == 0.0:
+        return
     coil_height = (axis.length() - 2 * end_length) / (2 * coil_count)
     axis.normalize_ip()
     coil_line = pygame.Vector2(coil_height, coil_width).rotate(pygame.Vector2(1, 0).angle_to(axis))
