@@ -135,11 +135,11 @@ def _run():
         while running:
             step = False
 
-            for event in pygame.event.get((pygame.QUIT, pygame.KEYDOWN)):
+            events = pygame.event.get()
+            for event in events:
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
-                    pygame.event.post(event)
                     if event.key == pygame.K_r:
                         _simulation = _create_simulation()
                     elif event.key == pygame.K_p:
@@ -164,7 +164,7 @@ def _run():
                 user_values_to_draw.clear()
 
             if simulation_valid:
-                simulation.handle_input()
+                simulation.handle_input(events)
                 if not _paused or step:
                     user_values_to_draw.clear()
                     try:
@@ -188,8 +188,6 @@ def _run():
                 values_to_draw.append((f"FPS: {clock.get_fps():.2f}", 'black'))
 
             simulation.draw(screen)
-
-            pygame.event.clear(pump=False)
 
             if _paused:
                 paused_indicator_surface = variables_font.render('Paused', True, 'blue')

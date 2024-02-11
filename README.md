@@ -9,19 +9,21 @@ Each exercise should define a function that calls `exerciser.run(create_simulati
 Calling `exerciser.run` opens a new Pygame window (or replaces the simulation in the existing window if called multiple times) and runs the simulation in that window.
 
 The simulation has two required methods:
-* `tick` is given the time elapsed since the last call to `tick` (by default 1/60 s) and should update the internal state of the simulation. If you need to call user-supplied code, then it should be done in this method (see below for some special exceptions available for error handling).
-* `draw` is given the Pygame window surface and should draw the simulation on screen.
+* `tick` is given the time elapsed since the last call to `tick` (by default 1/60 s) and should update the internal state of the simulation.
+If you need to call student code while simulating then it should be done in this method.
+This allows for good error handling (see special exception handling section below) and ensures that values shown in student code using `excerciser.show_value` show up correctly.
+* `draw` is given the Pygame window surface and should draw the simulation on screen. It should generally avoid changing the internal state of the simulation.
 
 Additionally, the simulation has one optional method:
-* `handle_input` can be used to handle user input and make simulations interactive (for example to move a simulated object using the mouse).
-It is given the screen size for calculating screen space coordinates.  
-You can call methods in `pygame.event`, `pygame.key`, `pygame.mouse` and other related modules to receive user input. Note: To avoid interfering with the main event loop, you should use `pygame.event.get(pump=False)` to get events.
+* `handle_input` is passed the list of events from `pygame.event.get()` and can be used to handle user input and make simulations interactive.  
+You can call methods in `pygame.key`, `pygame.mouse`, and other related modules to retrieve additional info about user input.  
+If you need the screen surface for calculating screen space coordinates then you can obtain it using `pygame.display.get_surface()`.
 
 During each frame the methods are called in the order `handle_input` -> `tick` -> `draw`. Under certain conditions, `handle_input` and `tick` may not be called (see below for more details).
 
 ## Special exception handling
 
-Exceptions thrown from simulation methods generally cause the window to close and the system to exit. However, there are some exception types that get special treatment when raised in `tick`:
+Exceptions thrown from simulation methods generally cause the window to close and the system to exit. However, there are some exception types that get special treatment when raised in `tick`. These are primarily designed for handling situations where student code called in `tick` behaves unexpectedly or raises an exception:
 
 * [`exerciser.ValidationError`](/exerciser/_shared.py) shows the error message on screen with no other details. This can be used to show a general-purpose error message to the user.
 * [`exerciser.CodeRunError`](/exerciser/_shared.py) shows the error message followed by the error type and message of the cause (a cause can be attached to the error using `raise exerciser.CodeRunError("Message") from cause`). This can be used to report an error that occurred when running student code and add some extra info to the error.
