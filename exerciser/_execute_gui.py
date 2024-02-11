@@ -1,5 +1,6 @@
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+os.environ['SDL_MOUSE_FOCUS_CLICKTHROUGH'] = '1'
 from contextvars import ContextVar
 import threading
 import warnings
@@ -134,11 +135,11 @@ def _run():
         while running:
             step = False
 
-            # Do not pump events here, so that events are still available inside `tick`
-            for event in pygame.event.get(pump=False):
+            for event in pygame.event.get((pygame.QUIT, pygame.KEYDOWN)):
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
+                    pygame.event.post(event)
                     if event.key == pygame.K_r:
                         _simulation = _create_simulation()
                     elif event.key == pygame.K_p:
@@ -148,7 +149,7 @@ def _run():
                             step = True
                         else:
                             _paused = True
-                    if event.key == pygame.K_F1:
+                    elif event.key == pygame.K_F1:
                         show_fps = not show_fps
 
             simulation = _simulation
@@ -162,25 +163,24 @@ def _run():
                 clear_message()
                 user_values_to_draw.clear()
 
-            if simulation_valid and (not _paused or step):
-                user_values_to_draw.clear()
-                try:
-                    # Tick with fixed delta to ensure that simulation is as deterministic as possible
-                    simulation.tick(DELTA)
-                except ValidationError as e:
-                    show_message(f"{e}", "red", None)
-                    simulation_valid = False
-                except CodeRunError as e:
-                    cause = e.__cause__ or e.__context__
-                    if cause is None:
-                        show_message(f"{e}: <unknown cause>", 'red', None)
-                    else:
-                        show_message(f"{e}: {type(cause).__name__}: {cause}", 'red', None)
-                        traceback.print_exception(cause)
-                    simulation_valid = False
-
-            # Pump events here to ensure that the window remains responsive even if there is no event handling inside `tick`
-            pygame.event.pump()
+            if simulation_valid:
+                simulation.handle_input()
+                if not _paused or step:
+                    user_values_to_draw.clear()
+                    try:
+                        # Tick with fixed delta to ensure that simulation is as deterministic as possible
+                        simulation.tick(DELTA)
+                    except ValidationError as e:
+                        show_message(f"{e}", "red", None)
+                        simulation_valid = False
+                    except CodeRunError as e:
+                        cause = e.__cause__ or e.__context__
+                        if cause is None:
+                            show_message(f"{e}: <unknown cause>", 'red', None)
+                        else:
+                            show_message(f"{e}: {type(cause).__name__}: {cause}", 'red', None)
+                            traceback.print_exception(cause)
+                        simulation_valid = False
 
             screen.fill('white')
 
@@ -188,6 +188,8 @@ def _run():
                 values_to_draw.append((f"FPS: {clock.get_fps():.2f}", 'black'))
 
             simulation.draw(screen)
+
+            pygame.event.clear(pump=False)
 
             if _paused:
                 paused_indicator_surface = variables_font.render('Paused', True, 'blue')
