@@ -32,7 +32,7 @@ def show_value(label: str, value: Any):
     """Show a user-supplied value on screen for debugging purposes"""
     values = _user_values_to_draw.get()
     if values is not None:
-        values.append(f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}")
+        values.append(f"{label} = {value:.3f}" if isinstance(value, float) else f"{label} = {value}")
 
 def show_simulation_value(label: str, value: Any, color: ColorValue = 'black'):
     """
@@ -42,7 +42,7 @@ def show_simulation_value(label: str, value: Any, color: ColorValue = 'black'):
     """
     values = _values_to_draw.get()
     if values is not None:
-        values.append((f"{label} = {value:.2f}" if isinstance(value, float) else f"{label} = {value}", color))
+        values.append((f"{label} = {value:.3f}" if isinstance(value, float) else f"{label} = {value}", color))
 
 def run(create_simulation: Callable[[], Simulation]):
     """
@@ -122,7 +122,6 @@ def _run():
 
         values_to_draw, user_values_to_draw = [], []
         _values_to_draw.set(values_to_draw)
-        _user_values_to_draw.set(user_values_to_draw)
 
         _paused = False
 
@@ -166,7 +165,11 @@ def _run():
             if simulation_valid:
                 simulation.handle_input(events)
                 if not _paused or step:
+                    # Only enable storing values in show_value during tick.
+                    # TODO: Enable show_value support for other simulation methods.
+                    # (Needs more complex clearing logic in cases where only some methods run.)
                     user_values_to_draw.clear()
+                    _user_values_to_draw.set(user_values_to_draw)
                     try:
                         # Tick with fixed delta to ensure that simulation is as deterministic as possible
                         simulation.tick(DELTA)
@@ -181,6 +184,7 @@ def _run():
                             show_message(f"{e}: {type(cause).__name__}: {cause}", 'red', None)
                             traceback.print_exception(cause)
                         simulation_valid = False
+                    _user_values_to_draw.set(None)
 
             screen.fill('white')
 
