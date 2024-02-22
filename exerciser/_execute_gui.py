@@ -19,12 +19,18 @@ TPS: Final[int] = 60
 DELTA: Final[float] = 1 / TPS
 """Default time delta between ticks in seconds (equal to 1 / TPS)"""
 
+_CONTROLS = [
+    "R - Restart the simulation",
+    "P - Pause the simulation",
+    "S - Step the simulation (execute one tick)",
+    "F1 - Toggle help text",
+]
+
 _lock = threading.Lock()
 
 _create_simulation: Optional[Callable[[], Simulation]] = None
 _simulation: Optional[Simulation] = None
 _initialized = False
-_paused = False
 _values_to_draw: ContextVar = ContextVar('values', default=None)
 _user_values_to_draw: ContextVar = ContextVar('user_values', default=None)
 
@@ -82,7 +88,7 @@ def run(create_simulation: Callable[[], Simulation]):
     threading.Thread(target=_run).start()
 
 def _run():
-    global _simulation, _initialized, _paused
+    global _simulation, _initialized
 
     try:
         assert _create_simulation is not None
@@ -123,10 +129,11 @@ def _run():
         values_to_draw, user_values_to_draw = [], []
         _values_to_draw.set(values_to_draw)
 
-        _paused = False
-
         tick = 0
         show_fps = False
+        show_help = False
+
+        paused = False
 
         last_simulation = None
         simulation_valid = True
@@ -142,13 +149,15 @@ def _run():
                     if event.key == pygame.K_r:
                         _simulation = _create_simulation()
                     elif event.key == pygame.K_p:
-                        _paused = not _paused
+                        paused = not paused
                     elif event.key == pygame.K_s:
-                        if _paused:
+                        if paused:
                             step = True
                         else:
-                            _paused = True
+                            paused = True
                     elif event.key == pygame.K_F1:
+                        show_help = not show_help
+                    elif event.key == pygame.K_F2:
                         show_fps = not show_fps
 
             simulation = _simulation
@@ -164,7 +173,7 @@ def _run():
 
             if simulation_valid:
                 simulation.handle_input(events)
-                if not _paused or step:
+                if not paused or step:
                     # Only enable storing values in show_value during tick.
                     # TODO: Enable show_value support for other simulation methods.
                     # (Needs more complex clearing logic in cases where only some methods run.)
@@ -193,7 +202,7 @@ def _run():
 
             simulation.draw(screen)
 
-            if _paused:
+            if paused:
                 paused_indicator_surface = variables_font.render('Paused', True, 'blue')
                 screen.blit(paused_indicator_surface, (screen.get_width() - paused_indicator_surface.get_width() - 5, 0))
 
@@ -205,6 +214,12 @@ def _run():
             for i, value in enumerate(user_values_to_draw):
                 variables_text_surface = variables_font.render(value, True, 'black')
                 screen.blit(variables_text_surface, (5, user_values_start + i * 25))
+
+            if show_help:
+                surfaces = [variables_font.render(text, True, 'black') for text in _CONTROLS]
+                offset = screen.get_width() - 5 - max(surface.get_width() for surface in surfaces)
+                for i, surface in enumerate(surfaces):
+                    screen.blit(surface, (offset, i * 25))
 
             if last_message_hide is None or pygame.time.get_ticks() < last_message_hide:
                 message_text_surface = variables_font.render(last_message, True, last_message_color)
