@@ -89,7 +89,7 @@ def run(create_simulation: Callable[[], Simulation]):
 
     if sys.platform == 'darwin':
         # MacOS requires that Pygame run on the main thread, so we need to hook whatever event loop is active on the main thread and run our main loop there.
-        # TODO: Some way to run this without an event loop (for example in a regular Python script)
+        # TODO: Some way to run this without an event loop (for example in a regular Python script).
         try:
             asyncio.create_task(_run_async())
         except RuntimeError:
@@ -100,7 +100,7 @@ def run(create_simulation: Callable[[], Simulation]):
 async def _run_async():
     mainloop = _mainloop(sleep=False)
     for _ in mainloop:
-        # TODO: Try to figure out some way to compensate for the fact that asyncio.sleep generally sleeps slightly longer than the provided time
+        # TODO: Try to figure out some way to compensate for the fact that asyncio.sleep generally sleeps slightly longer than the provided time.
         await asyncio.sleep(DELTA)
 
 def _run():
