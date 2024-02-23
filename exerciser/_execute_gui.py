@@ -1,6 +1,8 @@
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 os.environ['SDL_MOUSE_FOCUS_CLICKTHROUGH'] = '1'
+import sys
+import asyncio
 from contextvars import ContextVar
 import threading
 import warnings
@@ -70,7 +72,7 @@ def run(create_simulation: Callable[[], Simulation]):
         #
         # TODO: This issue may be Windows specific.
         # A comment in an old version of the TkAgg backend seems to imply this: https://github.com/matplotlib/matplotlib/blob/68f86b37bb294913513b7ee5106a5aaa1558969e/lib/matplotlib/backends/backend_tkagg.py#L597-L600.
-        tk_pygame_compat_warning = 'matplotlib is using the Tk backend. Tk has compatibility issues with Pygame that may cause Python to crash. Using a different matplotlib backend is recommended.'
+        tk_pygame_compat_warning = 'Matplotlib is using the Tk backend. Tk has compatibility issues with Pygame that may cause Python to crash. Using a different Matplotlib backend is recommended.'
         warnings.warn(tk_pygame_compat_warning, RuntimeWarning)
 
     global _create_simulation, _simulation, _initialized
@@ -85,9 +87,28 @@ def run(create_simulation: Callable[[], Simulation]):
             return
         _initialized = True
 
-    threading.Thread(target=_run).start()
+    if sys.platform == 'darwin':
+        # MacOS requires that Pygame run on the main thread, so we need to hook whatever event loop is active on the main thread and run our main loop there.
+        # TODO: Some way to run this without an event loop (for example in a regular Python script)
+        try:
+            asyncio.create_task(_run_async())
+        except RuntimeError:
+            raise RuntimeError("Running exerciser on MacOS requires a running event loop (e.g. being in a Jupyter notebook)")
+    else:
+        threading.Thread(target=_run).start()
+
+async def _run_async():
+    mainloop = _mainloop(sleep=False)
+    for _ in mainloop:
+        # TODO: Try to figure out some way to compensate for the fact that asyncio.sleep generally sleeps slightly longer than the provided time
+        await asyncio.sleep(DELTA)
 
 def _run():
+    mainloop = _mainloop(sleep=True)
+    for _ in mainloop:
+        pass
+
+def _mainloop(sleep: bool):
     global _simulation, _initialized
 
     try:
@@ -239,8 +260,10 @@ def _run():
             #         if canvas.figure.stale:
             #             canvas.draw_idle()
 
-            clock.tick(TPS)
+            clock.tick(TPS if sleep else 0)
             tick += 1
+
+            yield
 
         pygame.quit()
     finally:
