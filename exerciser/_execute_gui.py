@@ -33,6 +33,7 @@ _lock = threading.Lock()
 _create_simulation: Optional[Callable[[], Simulation]] = None
 _simulation: Optional[Simulation] = None
 _initialized = False
+_timer = None
 _values_to_draw: ContextVar = ContextVar('values', default=None)
 _user_values_to_draw: ContextVar = ContextVar('user_values', default=None)
 
@@ -75,7 +76,7 @@ def run(create_simulation: Callable[[], Simulation]):
         tk_pygame_compat_warning = 'Matplotlib is using the Tk backend. Tk has compatibility issues with Pygame that may cause Python to crash. Using a different Matplotlib backend is recommended.'
         warnings.warn(tk_pygame_compat_warning, RuntimeWarning)
 
-    global _create_simulation, _simulation, _initialized
+    global _create_simulation, _simulation, _initialized, _timer
 
     # TODO: It might be necessary to add more locking for thread safety.
     # Simple assignment is atomic on current CPython but that is not guaranteed for other implementations or future versions of CPython.
@@ -89,20 +90,41 @@ def run(create_simulation: Callable[[], Simulation]):
 
     if sys.platform == 'darwin':
         # MacOS requires that Pygame run on the main thread, so we need to hook whatever event loop is active on the main thread and run our main loop there.
-        # TODO: This stops working with some GUI event loops (notably Qt), because they only yield time to the asyncio event loop when there is a ZMQ message to be processed.
         # TODO: Some way to run this without an event loop (for example in a regular Python script).
+        # TODO: Errors thrown when iterating mainloop may be swallowed in some cases. We should explicitly log them.
+        mainloop = _mainloop(sleep=False)
+
+        # Hook IPython asyncio event loop
+        async def run_async():
+            for _ in mainloop:
+                # TODO: Try to figure out some way to compensate for the fact that asyncio.sleep generally sleeps slightly longer than the provided time.
+                await asyncio.sleep(DELTA)
         try:
-            asyncio.create_task(_run_async())
+            asyncio.create_task(run_async())
         except RuntimeError:
             raise RuntimeError("Running exerciser on MacOS requires a running event loop (e.g. being in a Jupyter notebook)")
+
+        # Hook Qt GUI event loop
+        try:
+            from IPython.external.qt_for_kernel import QtCore # type: ignore
+            if _timer is not None:
+                _timer.stop()
+            def run_timer():
+                global _timer
+                try:
+                    next(mainloop)
+                except StopIteration:
+                    if _timer is not None:
+                        _timer.stop()
+                        _timer = None
+            _timer = QtCore.QTimer()
+            _timer.timeout.connect(run_timer)
+            _timer.start(int(DELTA * 1000))
+        except ImportError:
+            # Either IPython or Qt is not installed
+            raise
     else:
         threading.Thread(target=_run).start()
-
-async def _run_async():
-    mainloop = _mainloop(sleep=False)
-    for _ in mainloop:
-        # TODO: Try to figure out some way to compensate for the fact that asyncio.sleep generally sleeps slightly longer than the provided time.
-        await asyncio.sleep(DELTA)
 
 def _run():
     mainloop = _mainloop(sleep=True)
@@ -149,7 +171,6 @@ def _mainloop(sleep: bool):
         variables_font = pygame.font.Font(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'LiberationSans-Regular.ttf'), 20)
 
         values_to_draw, user_values_to_draw = [], []
-        _values_to_draw.set(values_to_draw)
 
         tick = 0
         show_fps = False
@@ -185,6 +206,9 @@ def _mainloop(sleep: bool):
             simulation = _simulation
 
             values_to_draw.clear()
+            if show_fps:
+                values_to_draw.append((f"FPS: {clock.get_fps():.2f}", 'black'))
+            _values_to_draw.set(values_to_draw)
 
             if simulation is not last_simulation:
                 last_simulation = simulation
@@ -218,9 +242,6 @@ def _mainloop(sleep: bool):
                     _user_values_to_draw.set(None)
 
             screen.fill('white')
-
-            if show_fps:
-                values_to_draw.append((f"FPS: {clock.get_fps():.2f}", 'black'))
 
             simulation.draw(screen)
 
@@ -260,6 +281,8 @@ def _mainloop(sleep: bool):
             #         canvas = manager.canvas
             #         if canvas.figure.stale:
             #             canvas.draw_idle()
+
+            _values_to_draw.set(None)
 
             clock.tick(TPS if sleep else 0)
             tick += 1
