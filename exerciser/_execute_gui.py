@@ -288,8 +288,11 @@ def _mainloop(sleep: bool):
             tick += 1
 
             yield
-
-        pygame.quit()
+    except Exception as e:
+        traceback.print_exception(e)
     finally:
-        with _lock:
-            _initialized = False
+        try:
+            pygame.quit()
+        finally:
+            with _lock:
+                _initialized = False
