@@ -122,7 +122,7 @@ def run(create_simulation: Callable[[], Simulation]):
             _timer.start(int(DELTA * 1000))
         except ImportError:
             # Either IPython or Qt is not installed
-            raise
+            pass
     else:
         threading.Thread(target=_run).start()
 
