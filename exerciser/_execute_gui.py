@@ -143,7 +143,8 @@ def _mainloop(sleep: bool):
         # TODO: Moving Pygame into a separate thread has broken matplotlib compatibility outside of interactive notebooks.
         # See comments labeled with 'Matplotlib compatibility' for specific issues.
 
-        # TODO: Matplotlib compatibility: When Pygame closes, it should probably close all the matplotlib figures as well.
+        # TODO: Matplotlib compatibility:
+        # When Pygame closes, it should close all the matplotlib figures as well.
         # When matplotlib closes, it should close the Pygame window.
         # Note that matplotlib figures could be created after Pygame has started.
 
@@ -151,9 +152,9 @@ def _mainloop(sleep: bool):
         last_message_color = 'black'
         last_message_hide = 0
 
-        def show_message(message: str, message_color, message_duration_ms: Optional[int]):
+        def show_message(message: str, message_color, message_duration_ms: Optional[int] = None):
             nonlocal last_message, last_message_color, last_message_hide
-            print(message)
+            print(message, file=sys.stderr)
             last_message = message
             last_message_color = message_color
             last_message_hide = pygame.time.get_ticks() + message_duration_ms if message_duration_ms is not None else None
@@ -229,14 +230,14 @@ def _mainloop(sleep: bool):
                         # Tick with fixed delta to ensure that simulation is as deterministic as possible
                         simulation.tick(DELTA)
                     except ValidationError as e:
-                        show_message(f"{e}", "red", None)
+                        show_message(f"{e}", 'red')
                         simulation_valid = False
                     except CodeRunError as e:
                         cause = e.__cause__ or e.__context__
                         if cause is None:
-                            show_message(f"{e}: <unknown cause>", 'red', None)
+                            show_message(f"{e}: <unknown cause>", 'red')
                         else:
-                            show_message(f"{e}: {type(cause).__name__}: {cause}", 'red', None)
+                            show_message(f"{e}: {type(cause).__name__}: {cause}", 'red')
                             traceback.print_exception(cause)
                         simulation_valid = False
                     _user_values_to_draw.set(None)
@@ -289,6 +290,7 @@ def _mainloop(sleep: bool):
 
             yield
     except Exception as e:
+        print("Unexpected error while running visualization:", file=sys.stderr)
         traceback.print_exception(e)
     finally:
         try:
