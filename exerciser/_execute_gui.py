@@ -89,6 +89,7 @@ def run(create_simulation: Callable[[], Simulation]):
 
     if sys.platform == 'darwin':
         # MacOS requires that Pygame run on the main thread, so we need to hook whatever event loop is active on the main thread and run our main loop there.
+        # TODO: This stops working with some GUI event loops (notably Qt), because they only yield time to the asyncio event loop when there is a ZMQ message to be processed.
         # TODO: Some way to run this without an event loop (for example in a regular Python script).
         try:
             asyncio.create_task(_run_async())
