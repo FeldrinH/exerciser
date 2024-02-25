@@ -81,8 +81,8 @@ def run(create_simulation: Callable[[], Simulation]):
     # TODO: It might be necessary to add more locking for thread safety.
     # Simple assignment is atomic on current CPython but that is not guaranteed for other implementations or future versions of CPython.
 
-    _create_simulation = create_simulation
     _simulation = create_simulation()
+    _create_simulation = create_simulation
     with _lock:
         if _initialized:
             return
