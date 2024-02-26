@@ -294,6 +294,8 @@ def _mainloop(sleep: bool):
         traceback.print_exception(e)
     finally:
         try:
+            # TODO: Apparently pygame.quit() here causes Python to deadlock/freeze on MacOS.
+            #       Does using pygame.display.quit() fix the issue? If not, try to figure out why this happens and fix it.
             pygame.display.quit()
         finally:
             with _lock:
