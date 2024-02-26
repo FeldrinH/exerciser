@@ -294,7 +294,7 @@ def _mainloop(sleep: bool):
         traceback.print_exception(e)
     finally:
         try:
-            pygame.quit()
+            pygame.display.quit()
         finally:
             with _lock:
                 _initialized = False
