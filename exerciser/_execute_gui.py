@@ -1,4 +1,5 @@
 import os
+import time
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 os.environ['SDL_MOUSE_FOCUS_CLICKTHROUGH'] = '1'
 import sys
@@ -174,6 +175,7 @@ def _mainloop(sleep: bool):
         values_to_draw, user_values_to_draw = [], []
 
         tick = 0
+        last_frame_time = 0.0
         show_fps = False
         show_help = False
 
@@ -183,6 +185,8 @@ def _mainloop(sleep: bool):
         simulation_valid = True
 
         while running:
+            start_time = time.perf_counter()
+
             step = False
 
             events = pygame.event.get()
@@ -208,7 +212,7 @@ def _mainloop(sleep: bool):
 
             values_to_draw.clear()
             if show_fps:
-                values_to_draw.append((f"FPS: {clock.get_fps():.2f}", 'black'))
+                values_to_draw.append((f"FPS: {clock.get_fps():.2f}, Frame time: {last_frame_time * 1000:.2f} ms", 'black'))
             _values_to_draw.set(values_to_draw)
 
             if simulation is not last_simulation:
@@ -284,6 +288,8 @@ def _mainloop(sleep: bool):
             #             canvas.draw_idle()
 
             _values_to_draw.set(None)
+
+            last_frame_time = time.perf_counter() - start_time
 
             clock.tick(TPS if sleep else 0)
             tick += 1
