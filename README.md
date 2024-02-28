@@ -37,11 +37,12 @@ There are some useful keybinds available in the simulation window:
 * R - restart the simulation
 * P - pause the simulation
 * S - step the simulation (advance by one frame; if not paused pauses the simulation)
+* F1 - show help
 
 ## Minimum Python version
 
-This libarary should support Python 3.8 and above.
+This library should support Python 3.8 and above.
 
-Going below 3.8 will degrade user experience, because exercise type checking depends heavily on https://peps.python.org/pep-0544/.
+Going below 3.8 will degrade user experience, because simulation type checking depends heavily on https://peps.python.org/pep-0544/.
 
 Python 3.8 compatibility has been checked using static analysis tool [vermin](https://github.com/netromdk/vermin).
