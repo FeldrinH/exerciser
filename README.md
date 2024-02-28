@@ -43,6 +43,6 @@ There are some useful keybinds available in the simulation window:
 
 This library should support Python 3.8 and above.
 
-Going below 3.8 will degrade user experience, because simulation type checking depends heavily on https://peps.python.org/pep-0544/.
+Going below 3.8 will degrade user experience, because public API type checking depends heavily on https://peps.python.org/pep-0544/.
 
 Python 3.8 compatibility has been checked using static analysis tool [vermin](https://github.com/netromdk/vermin).
