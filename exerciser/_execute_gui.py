@@ -108,8 +108,10 @@ def run(create_simulation: Callable[[], Simulation]):
         # Hook Qt GUI event loop
         try:
             from IPython.external.qt_for_kernel import QtCore # type: ignore
+            from ipykernel.kernelbase import Kernel
             if _timer is not None:
                 _timer.stop()
+                _timer.deleteLater()
             def run_timer():
                 global _timer
                 try:
@@ -117,12 +119,15 @@ def run(create_simulation: Callable[[], Simulation]):
                 except StopIteration:
                     if _timer is not None:
                         _timer.stop()
+                        _timer.deleteLater()
                         _timer = None
-            _timer = QtCore.QTimer()
+            app = Kernel.instance().app # type: ignore
+            app.qt_event_loop # `qt_event_loop` attribute is present only if `app` is a Qt application
+            _timer = QtCore.QTimer(app)
             _timer.timeout.connect(run_timer)
             _timer.start(int(DELTA * 1000))
-        except ImportError:
-            # Either IPython or Qt is not installed
+        except (ImportError, AttributeError):
+            # Either IPython or Qt is not installed or the Qt event loop is not running
             pass
     else:
         threading.Thread(target=_run).start()
