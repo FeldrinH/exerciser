@@ -71,5 +71,5 @@ def draw_figure(surface: pygame.Surface, canvas: FigureCanvasAgg, left: float, t
         canvas.figure.tight_layout()
         size = canvas.get_width_height(physical=True)
     canvas.draw()
-    image = pygame.image.frombuffer(canvas.buffer_rgba(), size, 'RGBA')
+    image = pygame.image.frombuffer(canvas.buffer_rgba(), size, 'RGBA').convert()
     surface.blit(image, (left, top))
