@@ -13,6 +13,7 @@ The simulation has two required methods:
 If you need to call student code while simulating then it should be done in this method.
 This allows for good error handling (see special exception handling section below) and ensures that values shown in student code using `excerciser.show_value` show up correctly.
 * `draw` is given the Pygame window surface and should draw the simulation on screen. It should generally avoid changing the internal state of the simulation.
+Some helper methods for drawing common elements can be found under [`exerciser.pygame`](/exerciser/pygame.py)
 
 Additionally, the simulation has one optional method:
 * `handle_input` is passed the list of events from `pygame.event.get()` and can be used to handle user input and make simulations interactive.  
