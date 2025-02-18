@@ -1,8 +1,8 @@
 import os
-import time
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 os.environ['SDL_MOUSE_FOCUS_CLICKTHROUGH'] = '1'
 import sys
+import time
 import asyncio
 from contextvars import ContextVar
 import threading
@@ -14,8 +14,7 @@ import pygame
 from ._shared import CodeRunError, Simulation, ValidationError
 
 # Types copied from pygame/_common.pyi
-RGBAOutput = Tuple[int, int, int, int]
-ColorValue = Union[pygame.Color, int, str, Tuple[int, int, int], RGBAOutput, Sequence[int]]
+ColorValue = Union[pygame.Color, int, str, Tuple[int, int, int], Tuple[int, int, int, int], Sequence[int]]
 
 TPS: Final[int] = 60
 """Default tick rate in ticks per second (equal to 1 / DELTA ignoring rounding error)"""
@@ -39,14 +38,16 @@ _values_to_draw: ContextVar = ContextVar('values', default=None)
 _user_values_to_draw: ContextVar = ContextVar('user_values', default=None)
 
 def show_value(label: str, value: Any):
-    """Show a user-supplied value on screen for debugging purposes"""
+    """
+    Show a user-supplied value on screen for debugging purposes.
+    """
     values = _user_values_to_draw.get()
     if values is not None:
         values.append(f"{label} = {value:.3f}" if isinstance(value, float) else f"{label} = {value}")
 
 def show_simulation_value(label: str, value: Any, color: ColorValue = 'black'):
     """
-    Show an simulation-specific value on screen for informational/debugging purposes.
+    Show a simulation-specific value on screen for informational/debugging purposes.
     
     Note: This should be called inside `draw`, not inside `tick`.
     """
