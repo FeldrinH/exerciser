@@ -13,7 +13,6 @@ class CodeRunError(RuntimeError):
 class Simulation(Protocol):
     name: str
     """Name of the simulation. Used as window title."""
-
     initial_window_size: Tuple[int, int] = (800, 600)
     """Initial size of window in pixels. Defaults to (800, 600) if not specified."""
 
