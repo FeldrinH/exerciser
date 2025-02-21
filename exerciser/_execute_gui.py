@@ -13,13 +13,13 @@ import matplotlib
 import pygame
 from ._shared import CodeRunError, Simulation, ValidationError
 
-# Types copied from pygame/_common.pyi
+# Type copied from pygame/_common.pyi
 ColorValue = Union[pygame.Color, int, str, Tuple[int, int, int], Tuple[int, int, int, int], Sequence[int]]
 
 TPS: Final[int] = 60
-"""Default tick rate in ticks per second (equal to 1 / DELTA ignoring rounding error)"""
+"""Target tick rate in ticks per second (equal to 1 / DELTA ignoring rounding error)"""
 DELTA: Final[float] = 1 / TPS
-"""Default time delta between ticks in seconds (equal to 1 / TPS)"""
+"""Target time delta between ticks in seconds (equal to 1 / TPS)"""
 
 _CONTROLS = [
     "R - Restart the simulation",
