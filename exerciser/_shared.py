@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, Protocol
+from typing import List, Tuple, Protocol
 import pygame
 
 class ValidationError(RuntimeError):
@@ -8,12 +8,14 @@ class ValidationError(RuntimeError):
 class CodeRunError(RuntimeError):
     pass
 
-# Note: Even though Simulation is structurally typed,
-# it is recommended to explicitly subclass it for better type hints
-# and to get default implementations for optional methods.
+# Note: Even though Simulation is structurally typed, it is recommended to explicitly subclass it for better type hints
+# and to get default implementations for optional methods and default values for optional attributes.
 class Simulation(Protocol):
     name: str
     """Name of the simulation. Used as window title."""
+
+    initial_window_size: Tuple[int, int] = (800, 600)
+    """Initial size of window in pixels. Defaults to (800, 600) if not specified."""
 
     def handle_input(self, events: List[pygame.event.Event], /) -> None:
         """

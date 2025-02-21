@@ -172,7 +172,7 @@ def _mainloop(sleep: bool):
 
         pygame.display.init()
         pygame.font.init()
-        screen = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
+        screen = pygame.display.set_mode(_simulation.initial_window_size, pygame.RESIZABLE)
         pygame.display.set_caption(_simulation.name)
         clock = pygame.time.Clock()
         variables_font = pygame.font.Font(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Roboto-Regular-Modified.ttf'), 20)
