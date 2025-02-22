@@ -4,8 +4,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 # Types copied from pygame/_common.pyi
 Coordinate = Union[Tuple[float, float], Sequence[float], pygame.Vector2]
-RGBAOutput = Tuple[int, int, int, int]
-ColorValue = Union[pygame.Color, int, str, Tuple[int, int, int], RGBAOutput, Sequence[int]]
+ColorValue = Union[pygame.Color, int, str, Tuple[int, int, int], Tuple[int, int, int, int], Sequence[int]]
 
 # TODO: Make these functions use anti-aliasing so the lines look nicer.
 
