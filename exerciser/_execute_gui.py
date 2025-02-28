@@ -33,6 +33,7 @@ _lock = threading.Lock()
 _create_simulation: Optional[Callable[[], Simulation]] = None
 _simulation: Optional[Simulation] = None
 _initialized = False
+_parent_header = None
 _timer = None
 _values_to_draw: ContextVar = ContextVar('values', default=None)
 _user_values_to_draw: ContextVar = ContextVar('user_values', default=None)
@@ -78,7 +79,7 @@ def run(create_simulation: Callable[[], Simulation]):
         tk_pygame_compat_warning = 'Matplotlib is using the Tk backend. Tk has compatibility issues with Pygame that may cause Python to crash. Using a different Matplotlib backend is recommended.'
         warnings.warn(tk_pygame_compat_warning, RuntimeWarning)
 
-    global _create_simulation, _simulation, _initialized, _timer
+    global _create_simulation, _simulation, _initialized, _parent_header, _timer
 
     # TODO: It might be necessary to add more locking for thread safety.
     # Simple assignment is atomic on current CPython but that is not guaranteed for other implementations or future versions of CPython.
@@ -87,13 +88,18 @@ def run(create_simulation: Callable[[], Simulation]):
     _create_simulation = create_simulation
     with _lock:
         if _initialized:
+            try:
+                # Store parent header of latest run if running in an IPython notebook
+                _parent_header = sys.stdout.parent_header # type: ignore
+            except AttributeError:
+                # Not running in an IPython notebook
+                pass
             return
         _initialized = True
 
     if sys.platform == 'darwin':
         # MacOS requires that Pygame run on the main thread, so we need to hook whatever event loop is active on the main thread and run our main loop there.
         # TODO: Some way to run this without an event loop (for example in a regular Python script).
-        # TODO: Errors thrown when iterating mainloop may be swallowed in some cases. We should explicitly log them.
         mainloop = _mainloop(sleep=False)
 
         # Hook IPython asyncio event loop
@@ -139,7 +145,7 @@ def _run():
         pass
 
 def _mainloop(sleep: bool):
-    global _simulation, _initialized
+    global _simulation, _initialized, _parent_header
 
     try:
         assert _create_simulation is not None
@@ -186,11 +192,25 @@ def _mainloop(sleep: bool):
 
         paused = False
 
+        last_parent_header = None
+
         last_simulation = None
         simulation_valid = True
 
         while running:
             start_time = time.perf_counter()
+
+            parent_header = _parent_header
+            if parent_header is not last_parent_header:
+                last_parent_header = parent_header
+                # Redirect output from this thread to the notebook cell of the latest run if running in an IPython notebook
+                # Based on https://github.com/ipython/ipykernel/blob/v6.29.5/ipykernel/iostream.py#L505-L527
+                for stream in [sys.stdout, sys.stderr]:
+                    try:
+                        stream._parent_header.set(parent_header) # type: ignore
+                    except AttributeError:
+                        # Either not running in an IPython notebook or this stream is not hooked for output redirection
+                        pass
 
             step = False
 
@@ -311,3 +331,4 @@ def _mainloop(sleep: bool):
         finally:
             with _lock:
                 _initialized = False
+                _parent_header = None
