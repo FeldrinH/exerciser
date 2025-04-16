@@ -15,7 +15,9 @@ This allows for good error handling (see special exception handling section belo
 * `draw` is given the Pygame window surface and should draw the simulation on screen. It should generally avoid changing the internal state of the simulation.
 Some helper methods for drawing common elements can be found under [`exerciser.pygame`](/exerciser/pygame.py)
 
-Additionally, the simulation has one optional method:
+Additionally, the simulation has two optional methods:
+* `post_init` is called after Pygame has been initialized but before any other simulation methods have been called.
+It can be used to load Pygame resources (images, font files, etc).
 * `handle_input` is passed the list of events from `pygame.event.get()` and can be used to handle user input and make simulations interactive.  
 You can call methods in `pygame.key`, `pygame.mouse`, and other related modules to retrieve additional info about user input.  
 If you need the screen surface for calculating screen space coordinates then you can obtain it using `pygame.display.get_surface()`.

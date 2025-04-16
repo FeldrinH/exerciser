@@ -16,6 +16,14 @@ class Simulation(Protocol):
     initial_window_size: Tuple[int, int] = (800, 600)
     """Initial size of window in pixels. Defaults to (800, 600) if not specified."""
 
+    def post_init(self, /) -> None:
+        """
+        Perform initialization that depends on Pygame.
+
+        Called once after Pygame has been initialized but before any other method have been called.
+        """
+        pass
+
     def handle_input(self, events: List[pygame.event.Event], /) -> None:
         """
         Handle input and update state of interactive elements.
