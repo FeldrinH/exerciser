@@ -63,7 +63,7 @@ def run(create_simulation: Callable[[], Simulation]):
     Note: `create_simulation` may be called more than once to restart the simulation. It should return a new simulation object every time.
     """
 
-    if matplotlib.get_backend().casefold() == 'tkagg':
+    if matplotlib.get_backend().lower() == 'tkagg':
         # Running matplotlib with Tk backend and Pygame together occasionally causes Python to crash with the error message `Fatal Python error: PyEval_RestoreThread: NULL tstate`.
         # The Tk backend is also kind of flaky in general, having issues handling KeyboardInterrupt and moving the window in front of other windows on every reload.
         # Even if the Tk and Pygame crashing gets resolved it is probably a good idea to avoid the Tk backend.
@@ -327,7 +327,7 @@ def _mainloop(sleep: bool):
     finally:
         try:
             # TODO: Apparently pygame.quit() here causes Python to deadlock/freeze on MacOS.
-            #       Does using pygame.display.quit() fix the issue? If not, try to figure out why this happens and fix it.
+            # Does using pygame.display.quit() fix the issue? If not, try to figure out why this happens and fix it.
             pygame.display.quit()
         finally:
             with _lock:
