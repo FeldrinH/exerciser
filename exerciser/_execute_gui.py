@@ -183,6 +183,7 @@ def _mainloop(sleep: bool):
         # Currently this is blocked by the fact that we need to get initial window size from the simulation to set mode.
         simulation = _create_simulation()
 
+        # TODO: Is there a way to make Pygame ignore Windows display scaling?
         screen = pygame.display.set_mode(simulation.initial_window_size, pygame.RESIZABLE)
         pygame.display.set_caption(simulation.name)
 
