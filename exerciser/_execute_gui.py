@@ -31,7 +31,7 @@ _CONTROLS = [
 _lock = threading.Lock()
 
 _create_simulation: Optional[Callable[[], Simulation]] = None
-_simulation: Optional[Simulation] = None
+_recreate_simulation = False
 _initialized = False
 _parent_header = None
 _timer = None
@@ -79,13 +79,13 @@ def run(create_simulation: Callable[[], Simulation]):
         tk_pygame_compat_warning = 'Matplotlib is using the Tk backend. Tk has compatibility issues with Pygame that may cause Python to crash. Using a different Matplotlib backend is recommended.'
         warnings.warn(tk_pygame_compat_warning, RuntimeWarning)
 
-    global _create_simulation, _simulation, _initialized, _parent_header, _timer
+    global _create_simulation, _recreate_simulation, _initialized, _parent_header, _timer
 
     # TODO: It might be necessary to add more locking for thread safety.
     # Simple assignment is atomic on current CPython but that is not guaranteed for other implementations or future versions of CPython.
 
-    _simulation = create_simulation()
     _create_simulation = create_simulation
+    _recreate_simulation = True
     with _lock:
         if _initialized:
             try:
@@ -145,11 +145,10 @@ def _run():
         pass
 
 def _mainloop(sleep: bool):
-    global _simulation, _initialized, _parent_header
+    global _recreate_simulation, _initialized, _parent_header
 
     try:
         assert _create_simulation is not None
-        assert _simulation is not None
 
         running = True
 
@@ -178,8 +177,15 @@ def _mainloop(sleep: bool):
 
         pygame.display.init()
         pygame.font.init()
-        screen = pygame.display.set_mode(_simulation.initial_window_size, pygame.RESIZABLE)
-        pygame.display.set_caption(_simulation.name)
+
+        # TODO: Can we somehow move this after pygame.display.set_mode?
+        # Some functions (e.g. Surface.convert) need the display mode to be set before they can be called.
+        # Currently this is blocked by the fact that we need to get initial window size from the simulation to set mode.
+        simulation = _create_simulation()
+
+        screen = pygame.display.set_mode(simulation.initial_window_size, pygame.RESIZABLE)
+        pygame.display.set_caption(simulation.name)
+
         clock = pygame.time.Clock()
         variables_font = pygame.font.Font(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Roboto-Regular-Modified.ttf'), 20)
 
@@ -220,7 +226,7 @@ def _mainloop(sleep: bool):
                     running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
-                        _simulation = _create_simulation()
+                        _recreate_simulation = True
                     elif event.key == pygame.K_p:
                         paused = not paused
                     elif event.key == pygame.K_s:
@@ -233,7 +239,9 @@ def _mainloop(sleep: bool):
                     elif event.key == pygame.K_F2:
                         show_fps = not show_fps
 
-            simulation = _simulation
+            if _recreate_simulation:
+                _recreate_simulation = False
+                simulation = _create_simulation()
 
             values_to_draw.clear()
             if show_fps:
