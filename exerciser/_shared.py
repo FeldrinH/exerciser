@@ -20,7 +20,7 @@ class Simulation(Protocol):
         """
         Perform initialization that depends on Pygame.
 
-        Called once after Pygame has been initialized but before any other method have been called.
+        Called once after Pygame has been initialized but before any other methods have been called.
         """
         pass
 
