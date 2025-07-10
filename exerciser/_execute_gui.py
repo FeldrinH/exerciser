@@ -252,7 +252,6 @@ def _mainloop(sleep: bool):
             if simulation is not last_simulation:
                 last_simulation = simulation
                 simulation_valid = True
-                simulation.post_init()
                 # Clear previous error and values
                 clear_message()
                 user_values_to_draw.clear()
