@@ -1,4 +1,7 @@
-from typing import Sequence, Tuple, Union
+from typing import List, Sequence, Tuple, Union
+from dataclasses import dataclass
+import os
+import math
 import pygame
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
@@ -72,3 +75,79 @@ def draw_figure(surface: pygame.Surface, canvas: FigureCanvasAgg, left: float, t
     canvas.draw()
     image = pygame.image.frombuffer(canvas.buffer_rgba(), size, 'RGBA').convert()
     surface.blit(image, (left, top))
+
+_setup_done = False
+
+@dataclass(frozen=True)
+class _AxisParams:
+    label: str
+    range: float
+    bounds: Tuple[float, float]
+    step: float
+    formatter: str
+    align_right: bool
+
+class LinePlot:
+    """Pygame based line plot. More limited than Matplotlib, but also much more performant."""
+
+    def __init__(self):
+        self._lines: List[LinePlotLine] = []
+        self._yaxes: List[_AxisParams] = []
+    
+    def add_xaxis(self, *, label: str, range: float, step: float, formatter: str = "{}"):
+        self._xaxis = _AxisParams(label, range, (0, 0), step, formatter, False)
+    
+    def add_yaxis(self, *, label: str, bounds: Tuple[float, float], step: float, formatter: str = "{}", align_right: bool = False):
+        self._yaxes.append(_AxisParams(label, 0, bounds, step, formatter, align_right))
+    
+    def add_line(self, *, label: str, color: ColorValue, yaxis: int = 0) -> 'LinePlotLine':
+        line = LinePlotLine(label, color, yaxis)
+        self._lines.append(line)
+        return line
+
+    def draw(self, surface: pygame.Surface, left: float, top: float, width: float, height: float):
+        global _setup_done, _axes_font
+        if _setup_done:
+            _setup_done = True
+            _axes_font = pygame.font.Font(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Roboto-Regular-Modified.ttf'), 20)
+        
+        # TODO: Draw axes
+        
+        for line in self._lines:
+            x_max = max(line._points[-1][0] for line in self._lines)
+            xaxis_bounds = (x_max - self._xaxis.range, x_max)
+            # TODO: Calculate correct bounds that account for and padding
+            line._draw(surface, left, top, width, height, xaxis_bounds, self._yaxes[line._yaxis].bounds)
+
+class LinePlotLine:
+    """Individual line plot line. Created by calling `LinePlot.add_line`."""
+
+    def __init__(self, label: str, color: ColorValue, yaxis: int):
+        self._label = label
+        self._color = color
+        self._yaxis = yaxis
+        self._points = []
+
+    def add_point(self, x: float, y: float):
+        self._points.append((x, y))
+    
+    def clear(self):
+        self._points.clear()
+
+    def _draw(self, surface: pygame.Surface, left: float, top: float, width: float, height: float, xaxis_bounds: Tuple[float, float], yaxis_bounds: Tuple[float, float]):
+        yaxis_discontinuity_limit = (yaxis_bounds[1] - yaxis_bounds[0]) * 0.8 # TODO: Should this be an explicit parameter?
+        x_offset, x_scaler = -xaxis_bounds[0], width / (xaxis_bounds[1] - xaxis_bounds[0])
+        y_offset, y_scaler = -yaxis_bounds[1], height / (yaxis_bounds[0] - yaxis_bounds[1])
+        
+        y_prev = math.nan
+        segments = [[]]
+        for x, y in self._points:
+            if x >= xaxis_bounds[0]:
+                if abs(y - y_prev) > yaxis_discontinuity_limit:
+                    segments.append([])
+                y_prev = y
+                segments[-1].append((left + (x + x_offset) * x_scaler, top + (y + y_offset) * y_scaler))
+                
+        for points in segments:
+            if len(points) >= 2:
+                pygame.draw.lines(surface, self._color, False, points, 2)
