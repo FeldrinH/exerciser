@@ -28,6 +28,52 @@ _CONTROLS = [
     "F1 - Toggle help text",
 ]
 
+_CONTROLS_REAL_TIME = _CONTROLS[:1] + _CONTROLS[3:]
+
+class _RealTimeTickRunner:
+    def __init__(self, simulation: Simulation):
+        self._running = True
+        self._simulation = simulation
+
+        self._user_values_to_draw = []
+        self._exception = None
+
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+    
+    def _run(self):
+        try:            
+            clock = pygame.time.Clock()
+            last_tick_time = time.perf_counter() - DELTA
+            
+            while self._running:
+                user_values_to_draw = []
+                _user_values_to_draw.set(user_values_to_draw)
+                
+                current_tick_time = time.perf_counter()
+                delta = current_tick_time - last_tick_time
+                last_tick_time = current_tick_time
+                self._simulation.tick(delta)
+
+                _user_values_to_draw.set(None)
+                self._user_values_to_draw = user_values_to_draw
+
+                clock.tick(TPS)
+        except Exception as e:
+            self._exception = e
+
+    def proxy_tick(self):
+        if self._exception is not None:
+            raise self._exception
+        
+        values = _user_values_to_draw.get()
+        if values is not None:
+            values.extend(self._user_values_to_draw)
+
+    def stop(self):
+        self._running = False
+        self._thread.join() # TODO: Add some kind of timeout?
+
 _lock = threading.Lock()
 
 _create_simulation: Optional[Callable[[], Simulation]] = None
@@ -137,15 +183,16 @@ def run(create_simulation: Callable[[], Simulation]):
             # Either IPython or Qt is not installed or the Qt event loop is not running
             pass
     else:
+        def _run():
+            mainloop = _mainloop(sleep=True)
+            for _ in mainloop:
+                pass
         threading.Thread(target=_run).start()
-
-def _run():
-    mainloop = _mainloop(sleep=True)
-    for _ in mainloop:
-        pass
 
 def _mainloop(sleep: bool):
     global _recreate_simulation, _initialized, _parent_header
+
+    real_time_tick_runner = None
 
     try:
         assert _create_simulation is not None
@@ -215,6 +262,7 @@ def _mainloop(sleep: bool):
                 for stream in [sys.stdout, sys.stderr]:
                     try:
                         stream._parent_header.set(parent_header) # type: ignore
+                        stream._thread_to_parent_header[threading.get_ident()] = parent_header # type: ignore
                     except AttributeError:
                         # Either not running in an IPython notebook or this stream is not hooked for output redirection
                         pass
@@ -228,9 +276,9 @@ def _mainloop(sleep: bool):
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
                         _recreate_simulation = True
-                    elif event.key == pygame.K_p:
+                    elif event.key == pygame.K_p and real_time_tick_runner is None:
                         paused = not paused
-                    elif event.key == pygame.K_s:
+                    elif event.key == pygame.K_s and real_time_tick_runner is None:
                         if paused:
                             step = True
                         else:
@@ -252,9 +300,17 @@ def _mainloop(sleep: bool):
             if simulation is not last_simulation:
                 last_simulation = simulation
                 simulation_valid = True
+
                 # Clear previous error and values
                 clear_message()
                 user_values_to_draw.clear()
+
+                if real_time_tick_runner is not None:
+                    real_time_tick_runner.stop()
+                    real_time_tick_runner = None
+                if simulation.real_time_tick:
+                    real_time_tick_runner = _RealTimeTickRunner(simulation)
+                    paused = False
 
             if simulation_valid:
                 simulation.handle_input(events)
@@ -265,8 +321,11 @@ def _mainloop(sleep: bool):
                     user_values_to_draw.clear()
                     _user_values_to_draw.set(user_values_to_draw)
                     try:
-                        # Tick with fixed delta to ensure that simulation is as deterministic as possible
-                        simulation.tick(DELTA)
+                        if real_time_tick_runner is None:
+                            # Tick with fixed delta to ensure that simulation is as deterministic as possible
+                            simulation.tick(DELTA)
+                        else:
+                            real_time_tick_runner.proxy_tick()
                     except ValidationError as e:
                         show_message(f"{e}", 'red')
                         simulation_valid = False
@@ -298,7 +357,8 @@ def _mainloop(sleep: bool):
                 screen.blit(variables_text_surface, (5, user_values_start + i * 25))
 
             if show_help:
-                surfaces = [variables_font.render(text, True, 'black') for text in _CONTROLS]
+                controls = _CONTROLS if real_time_tick_runner is None else _CONTROLS_REAL_TIME
+                surfaces = [variables_font.render(text, True, 'black') for text in controls]
                 offset = screen.get_width() - 5 - max(surface.get_width() for surface in surfaces)
                 for i, surface in enumerate(surfaces):
                     screen.blit(surface, (offset, i * 25))
@@ -334,10 +394,14 @@ def _mainloop(sleep: bool):
         traceback.print_exception(e)
     finally:
         try:
-            # TODO: Apparently pygame.quit() here causes Python to deadlock/freeze on MacOS.
-            # Does using pygame.display.quit() fix the issue? If not, try to figure out why this happens and fix it.
-            pygame.display.quit()
+            if real_time_tick_runner is not None:
+                real_time_tick_runner.stop()
         finally:
-            with _lock:
-                _initialized = False
-                _parent_header = None
+            try:
+                # TODO: Apparently pygame.quit() here causes Python to deadlock/freeze on MacOS.
+                # Does using pygame.display.quit() fix the issue? If not, try to figure out why this happens and fix it.
+                pygame.display.quit()
+            finally:
+                with _lock:
+                    _initialized = False
+                    _parent_header = None

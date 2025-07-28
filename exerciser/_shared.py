@@ -12,9 +12,22 @@ class CodeRunError(RuntimeError):
 # and to get default implementations for optional methods and default values for optional attributes.
 class Simulation(Protocol):
     name: str
-    """Name of the simulation. Used as window title."""
+    """
+    Name of the simulation. Used as window title.
+    """
     initial_window_size: Tuple[int, int] = (800, 600)
-    """Initial size of window in pixels. Defaults to (800, 600) if not specified."""
+    """
+    Initial size of window in pixels. Defaults to (800, 600) if not specified.
+    """
+    real_time_tick: bool = False
+    """
+    Enables real time mode for `tick` method. This is designed for systems where the `tick` method controls a soft realtime system (e.g. a real mechanical device).
+
+    In real time mode the following changes are made to the standard main loop:
+    * `tick` runs in a separate thread, where the tick rate is unaffected by fluctuations in FPS.
+    * The delta value passed to `tick` is based on real time, instead of being a fixed value.
+    * The simulation cannot be paused.
+    """
 
     # TODO: We may need lifecycle hooks (e.g. setup and cleanup) eventually.
 
