@@ -119,7 +119,7 @@ class LinePlot:
 
         axis_height = 40
         axis_width = 40
-        pad = 6
+        pad = 8
 
         padded_left = left + axis_width
         padded_width = width - axis_width
@@ -147,11 +147,11 @@ class LinePlot:
             value = i * step
             x = padded_left + pad + (value + x_offset) * x_scaler
             pygame.draw.line(surface, 'black', (x, axis_top), (x, axis_top + 5))
-            label = _axes_font.render(self._x_formatter.format(value), True, 'black')
+            label = _axes_font.render(self._x_formatter.format(value), True, 'black') # type: ignore
             surface.blit(label, (x - label.get_width() / 2, axis_top + 5))
         
         # Draw x-axis label
-        label = _axes_font.render(self._x_label, True, 'black')
+        label = _axes_font.render(self._x_label, True, 'black') # type: ignore
         surface.blit(label, (padded_left + padded_width / 2, axis_top + 22))
 
 class _LinePlotLine:
@@ -208,6 +208,11 @@ class _LinePlotLine:
         surface.blit(label, (left - 30 - label.get_width(), top + height / 2 - label.get_height() / 2))
 
 def _plot_calculate_steps(bounds: Tuple[float, float], steps: int):
-    step = max(round((bounds[1] - bounds[0]) / steps), 0.5) # TODO: Smarter step calculation
+    # TODO: Smarter step calculation
+    step = (bounds[1] - bounds[0]) / steps
+    if step < 0.75:
+        step = 0.5
+    else:
+        step = round(step)
     indexes = range(math.ceil(bounds[0] / step - 0.001), math.floor(bounds[1] / step + 0.001) + 1)
     return step, indexes
