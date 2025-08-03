@@ -118,7 +118,7 @@ class LinePlot:
         x_bounds = (x_start, x_start + self._x_range)
 
         axis_height = 40
-        axis_width = 40
+        axis_width = 60
         pad = 8
 
         padded_left = left + axis_width
@@ -130,7 +130,7 @@ class LinePlot:
         for i, line in enumerate(self._lines):
             # TODO: Calculate correct height that accounts for padding
             line_top = top + i * line_height
-            line._draw(surface, padded_left, line_top, padded_width, line_height, pad, x_bounds)
+            line._draw(surface, padded_left, line_top, padded_width, line_height, axis_width, pad, x_bounds)
             pygame.draw.line(surface, 'black', (padded_left, line_top), (padded_left + padded_width, line_top))
         
         axis_top = top + height - axis_height
@@ -163,7 +163,8 @@ class _LinePlotLine:
         self._formatter = formatter
         self._points = []
 
-    def _draw(self, surface: pygame.Surface, left: float, top: float, width: float, height: float, pad: float, x_bounds: Tuple[float, float]):
+    def _draw(self, surface: pygame.Surface, left: float, top: float, width: float, height: float,
+              axis_width: float, pad: float, x_bounds: Tuple[float, float]):
         # TODO: Use fact that points.x is sorted to optimize this?
         visible_points = [(x, y) for x, y in self._points if x >= x_bounds[0]]
         if not visible_points:
@@ -205,7 +206,7 @@ class _LinePlotLine:
         # Draw y-axis label
         label = _axes_font.render(self._label, True, 'black')
         label = pygame.transform.rotate(label, 90)
-        surface.blit(label, (left - 30 - label.get_width(), top + height / 2 - label.get_height() / 2))
+        surface.blit(label, (left - axis_width, top + height / 2 - label.get_height() / 2))
 
 def _plot_calculate_steps(bounds: Tuple[float, float], steps: int):
     # TODO: Smarter step calculation
