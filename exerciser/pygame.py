@@ -91,7 +91,7 @@ class LinePlot:
         line = _LinePlotLine(label, color, bounds, range, formatter)
         self._lines.append(line)
     
-    def add_data(self, x: float, y: tuple[float, ...]):
+    def add_data(self, x: float, y: Tuple[float, ...]):
         assert len(y) == len(self._lines)
         for y_l, line in zip(y, self._lines):
             line._points.append((x, y_l))
