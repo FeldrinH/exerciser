@@ -167,13 +167,11 @@ class _LinePlotLine:
               axis_width: float, pad: float, x_bounds: Tuple[float, float]):
         # TODO: Use fact that points.x is sorted to optimize this?
         visible_points = [(x, y) for x, y in self._points if x >= x_bounds[0]]
-        if not visible_points:
-            return
         
         if self._bounds is not None:
             y_bounds = self._bounds
         else:
-            y_bounds = (min(y for _, y in visible_points), max(y for _, y in visible_points))
+            y_bounds = (min((y for _, y in visible_points), default=0.0), max((y for _, y in visible_points), default=0.0))
             if self._range is not None and y_bounds[1] - y_bounds[0] < self._range:
                 y_bounds_center = sum(y_bounds) / 2
                 y_bounds = (y_bounds_center - self._range / 2, y_bounds_center + self._range / 2)
