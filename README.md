@@ -4,7 +4,7 @@ A library for control exercises based on Pygame.
 
 ## Installation
 
-Install using `pip install exerciser@git+https://github.com/FeldrinH/exerciser` or the equivalent command for your preferred package installer.
+Install using `pip install exerciser@git+https://github.com/FeldrinH/exerciser` or the equivalent command for your preferred Python package manager.
 
 ## Usage
 
@@ -51,4 +51,5 @@ This library should support Python 3.8 and above.
 Going below 3.8 will degrade user experience, because public API type checking depends heavily on https://peps.python.org/pep-0544/.
 
 Python 3.8 compatibility has been checked using static analysis tool [Vermin](https://github.com/netromdk/vermin).
+
 
