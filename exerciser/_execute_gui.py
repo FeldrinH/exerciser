@@ -27,6 +27,7 @@ _CONTROLS = [
     "S - Step the simulation (execute one tick)",
     "F1 - Toggle help text",
 ]
+_CONTROLS_REAL_TIME = _CONTROLS[:1] + _CONTROLS[3:]
 
 _lock = threading.Lock()
 
@@ -311,7 +312,8 @@ def _mainloop(sleep: bool):
                 screen.blit(variables_text_surface, (5, user_values_start + i * 25))
 
             if show_help:
-                surfaces = [variables_font.render(text, True, 'black') for text in _CONTROLS]
+                controls = _CONTROLS if simulation.real_time is None else _CONTROLS_REAL_TIME
+                surfaces = [variables_font.render(text, True, 'black') for text in controls]
                 offset = screen.get_width() - 5 - max(surface.get_width() for surface in surfaces)
                 for i, surface in enumerate(surfaces):
                     screen.blit(surface, (offset, i * 25))
