@@ -192,12 +192,12 @@ def _mainloop(sleep: bool):
 
         values_to_draw, user_values_to_draw = [], []
 
-        tick = 0
+        last_tick_time = 0.0
         last_frame_time = 0.0
-        show_fps = False
-        show_help = False
 
         paused = False
+        show_fps = False
+        show_help = False
 
         last_parent_header = None
 
@@ -252,6 +252,12 @@ def _mainloop(sleep: bool):
             if simulation is not last_simulation:
                 last_simulation = simulation
                 simulation_valid = True
+                
+                # Unpause and reset last tick time if real-time simulation
+                if simulation.real_time:
+                    last_tick_time = time.perf_counter() - DELTA
+                    paused = False
+
                 # Clear previous error and values
                 clear_message()
                 user_values_to_draw.clear()
@@ -265,8 +271,15 @@ def _mainloop(sleep: bool):
                     user_values_to_draw.clear()
                     _user_values_to_draw.set(user_values_to_draw)
                     try:
-                        # Tick with fixed delta to ensure that simulation is as deterministic as possible
-                        simulation.tick(DELTA)
+                        if simulation.real_time:
+                            # Tick with real-time delta
+                            tick_time = time.perf_counter()
+                            delta = min(tick_time - last_tick_time, 1.0)
+                            last_tick_time = tick_time
+                        else:
+                            # Tick with fixed delta to ensure that simulation is as deterministic as possible
+                            delta = DELTA
+                        simulation.tick(delta)
                     except ValidationError as e:
                         show_message(f"{e}", 'red')
                         simulation_valid = False
@@ -326,7 +339,6 @@ def _mainloop(sleep: bool):
             last_frame_time = time.perf_counter() - start_time
 
             clock.tick(TPS if sleep else 0)
-            tick += 1
 
             yield
     except Exception as e:
