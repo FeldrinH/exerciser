@@ -229,9 +229,9 @@ def _mainloop(sleep: bool):
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
                         _recreate_simulation = True
-                    elif event.key == pygame.K_p:
+                    elif event.key == pygame.K_p and not simulation.real_time:
                         paused = not paused
-                    elif event.key == pygame.K_s:
+                    elif event.key == pygame.K_s and not simulation.real_time:
                         if paused:
                             step = True
                         else:
