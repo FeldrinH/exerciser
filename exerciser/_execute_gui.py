@@ -47,7 +47,7 @@ def show_value(label: str, value: Any):
     if values is not None:
         values.append(f"{label} = {value:.3f}" if isinstance(value, float) else f"{label} = {value}")
 
-def show_simulation_value(label: str, value: Any, color: ColorValue = 'black'):
+def show_simulation_value(label: str, value: Any, *, color: ColorValue = 'black'):
     """
     Show a simulation-specific value on screen for informational/debugging purposes.
     
