@@ -192,7 +192,9 @@ def _mainloop(sleep: bool):
         # Try to grab focus if possible
         try:
             import pygame._sdl2 as pygame_sdl2
-            pygame_sdl2.Window.from_display_module().focus()
+            window = pygame_sdl2.Window.from_display_module()
+            window.show()
+            window.focus()
         except Exception:
             pass
 
