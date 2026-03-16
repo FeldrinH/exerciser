@@ -1,6 +1,7 @@
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 os.environ['SDL_MOUSE_FOCUS_CLICKTHROUGH'] = '1'
+#os.environ['SDL_HINT_FORCE_RAISEWINDOW'] = '1'
 import sys
 import time
 import asyncio
@@ -187,6 +188,13 @@ def _mainloop(sleep: bool):
         # TODO: Is there a way to make Pygame ignore Windows display scaling?
         screen = pygame.display.set_mode(simulation.initial_window_size, pygame.RESIZABLE)
         pygame.display.set_caption(simulation.name)
+
+        # Try to grab focus if possible
+        try:
+            import pygame._sdl2 as pygame_sdl2
+            pygame_sdl2.Window.from_display_module().focus()
+        except Exception:
+            pass
 
         clock = pygame.time.Clock()
         variables_font = pygame.font.Font(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Roboto-Regular-Modified.ttf'), 20)
