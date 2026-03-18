@@ -8,14 +8,14 @@ import asyncio
 from contextvars import ContextVar
 import threading
 import warnings
-from typing import Any, Callable, Final, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Final, Sequence
 import traceback
 import matplotlib
 import pygame
 from ._shared import CodeRunError, Simulation, ValidationError
 
 # Type copied from pygame/_common.pyi
-ColorValue = Union[pygame.Color, int, str, Tuple[int, int, int], Tuple[int, int, int, int], Sequence[int]]
+ColorValue = pygame.Color | int | str | tuple[int, int, int] | tuple[int, int, int, int] | Sequence[int]
 
 TPS: Final[int] = 60
 """Target tick rate in ticks per second (equal to 1 / DELTA ignoring rounding error)"""
@@ -32,7 +32,7 @@ _CONTROLS_REAL_TIME = _CONTROLS[:1] + _CONTROLS[3:]
 
 _lock = threading.Lock()
 
-_create_simulation: Optional[Callable[[], Simulation]] = None
+_create_simulation: Callable[[], Simulation] | None = None
 _recreate_simulation = False
 _initialized = False
 _parent_header = None
@@ -166,7 +166,7 @@ def _mainloop(sleep: bool):
         last_message_color = 'black'
         last_message_hide = 0
 
-        def show_message(message: str, message_color, message_duration_ms: Optional[int] = None):
+        def show_message(message: str, message_color, message_duration_ms: int | None = None):
             nonlocal last_message, last_message_color, last_message_hide
             print(message, file=sys.stderr)
             last_message = message

@@ -1,16 +1,16 @@
-from typing import List, Sequence, Tuple, Union
+from typing import Sequence
 import os
 import math
 import pygame
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 # Types copied from pygame/_common.pyi
-Coordinate = Union[Tuple[float, float], Sequence[float], pygame.Vector2]
-ColorValue = Union[pygame.Color, int, str, Tuple[int, int, int], Tuple[int, int, int, int], Sequence[int]]
+Coordinate = tuple[float, float] | Sequence[float] | pygame.Vector2
+ColorValue = pygame.Color | int | str | tuple[int, int, int] | tuple[int, int, int, int] | Sequence[int]
 
 # TODO: Make these functions use anti-aliasing so the lines look nicer.
 
-def draw_dashed_line(surface: pygame.Surface, color: ColorValue, start: Coordinate, end: Coordinate, pattern: Tuple[int, int], width: int = 1):
+def draw_dashed_line(surface: pygame.Surface, color: ColorValue, start: Coordinate, end: Coordinate, pattern: tuple[int, int], width: int = 1):
     axis = pygame.Vector2(end) - pygame.Vector2(start)
     if axis.length_squared() == 0.0:
         return
@@ -84,14 +84,14 @@ class LinePlot:
         self._x_label = x_label
         self._x_range = x_range
         self._x_formatter = x_formatter
-        self._lines: List[_LinePlotLine] = []
+        self._lines: list[_LinePlotLine] = []
     
     def add_line(self, *, label: str, color: ColorValue, 
-                 bounds: Tuple[float, float] | None = None, range: float | None = None, formatter: str = "{}"):
+                 bounds: tuple[float, float] | None = None, range: float | None = None, formatter: str = "{}"):
         line = _LinePlotLine(label, color, bounds, range, formatter)
         self._lines.append(line)
     
-    def add_data(self, x: float, y: Tuple[float, ...]):
+    def add_data(self, x: float, y: Sequence[float]):
         assert len(y) == len(self._lines)
         for y_l, line in zip(y, self._lines):
             line._points.append((x, y_l))
@@ -154,7 +154,7 @@ class LinePlot:
         surface.blit(label, (padded_left + padded_width / 2, axis_top + 22))
 
 class _LinePlotLine:
-    def __init__(self, label: str, color: ColorValue, bounds: Tuple[float, float] | None, range: float | None, formatter: str):
+    def __init__(self, label: str, color: ColorValue, bounds: tuple[float, float] | None, range: float | None, formatter: str):
         self._label = label
         self._color = color
         self._bounds = bounds
@@ -163,7 +163,7 @@ class _LinePlotLine:
         self._points = []
 
     def _draw(self, surface: pygame.Surface, left: float, top: float, width: float, height: float,
-              axis_width: float, pad: float, x_bounds: Tuple[float, float]):
+              axis_width: float, pad: float, x_bounds: tuple[float, float]):
         # TODO: Use fact that points.x is sorted to optimize this?
         visible_points = [(x, y) for x, y in self._points if x >= x_bounds[0]]
         
@@ -205,7 +205,7 @@ class _LinePlotLine:
         label = pygame.transform.rotate(label, 90)
         surface.blit(label, (left - axis_width, top + height / 2 - label.get_height() / 2))
 
-def _plot_calculate_steps(bounds: Tuple[float, float], steps: int):
+def _plot_calculate_steps(bounds: tuple[float, float], steps: int):
     # TODO: Smarter step calculation
     step = (bounds[1] - bounds[0]) / steps
     if step < 0.75:

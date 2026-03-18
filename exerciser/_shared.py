@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, Tuple, Protocol
+from typing import Protocol
 import pygame
 
 class ValidationError(RuntimeError):
@@ -16,7 +16,7 @@ class Simulation(Protocol):
     Name of the simulation. Used as window title.
     """
 
-    initial_window_size: Tuple[int, int] = (800, 600)
+    initial_window_size: tuple[int, int] = (800, 600)
     """
     Initial size of window in pixels. Defaults to (800, 600) if not specified.
     """
@@ -32,7 +32,7 @@ class Simulation(Protocol):
 
     # TODO: We may need lifecycle hooks (e.g. setup and cleanup) eventually.
 
-    def handle_input(self, events: List[pygame.event.Event], /) -> None:
+    def handle_input(self, events: list[pygame.event.Event], /) -> None:
         """
         Handle input and update state of interactive elements.
         

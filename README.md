@@ -46,10 +46,4 @@ There are some useful keybinds available in the simulation window:
 
 ## Minimum Python version
 
-This library should support Python 3.8 and above.
-
-Going below 3.8 will degrade user experience, because public API type checking depends heavily on https://peps.python.org/pep-0544/.
-
-Python 3.8 compatibility has been checked using static analysis tool [Vermin](https://github.com/netromdk/vermin).
-
-
+This library should support Python 3.10 and above. Python 3.10 compatibility has been checked using static analysis tool [Vermin](https://github.com/netromdk/vermin).
