@@ -185,6 +185,7 @@ def _mainloop(sleep: bool):
         # TODO: Can we somehow move this after pygame.display.set_mode?
         # Some functions (e.g. Surface.convert) need the display mode to be set before they can be called.
         # Currently this is blocked by the fact that we need to get initial window size from the simulation to set mode.
+        _recreate_simulation = False
         simulation = _create_simulation()
 
         # TODO: Is there a way to make Pygame ignore Windows display scaling?
