@@ -106,9 +106,11 @@ def run(create_simulation: Callable[[], Simulation]):
 
         # Hook IPython asyncio event loop
         async def run_async():
+            next_iteration = time.perf_counter()
             for _ in mainloop:
-                # TODO: Try to figure out some way to compensate for the fact that asyncio.sleep generally sleeps slightly longer than the provided time.
-                await asyncio.sleep(DELTA)
+                now = time.perf_counter()
+                next_iteration = max(next_iteration + DELTA, now)
+                await asyncio.sleep(next_iteration - now)
         try:
             asyncio.create_task(run_async())
         except RuntimeError:
