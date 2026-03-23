@@ -1,3 +1,4 @@
+from collections import deque
 from typing import Sequence
 import os
 import math
@@ -94,6 +95,8 @@ class LinePlot:
     def add_data(self, x: float, y: Sequence[float]):
         assert len(y) == len(self._lines)
         for y_l, line in zip(y, self._lines):
+            while line._points and x - line._points[0][0] > self._x_range:
+                line._points.popleft()
             line._points.append((x, y_l))
     
     def clear(self):
@@ -160,17 +163,14 @@ class _LinePlotLine:
         self._bounds = bounds
         self._range = range
         self._formatter = formatter
-        self._points = []
+        self._points = deque() # NB: deque is fast to index from start and end, but not middle
 
     def _draw(self, surface: pygame.Surface, left: float, top: float, width: float, height: float,
               axis_width: float, pad: float, x_bounds: tuple[float, float]):
-        # TODO: Use fact that points.x is sorted to optimize this?
-        visible_points = [(x, y) for x, y in self._points if x >= x_bounds[0]]
-        
         if self._bounds is not None:
             y_bounds = self._bounds
         else:
-            y_bounds = (min((y for _, y in visible_points), default=0.0), max((y for _, y in visible_points), default=0.0))
+            y_bounds = (min((y for _, y in self._points), default=0.0), max((y for _, y in self._points), default=0.0))
             if self._range is not None and y_bounds[1] - y_bounds[0] < self._range:
                 y_bounds_center = sum(y_bounds) / 2
                 y_bounds = (y_bounds_center - self._range / 2, y_bounds_center + self._range / 2)
@@ -180,7 +180,7 @@ class _LinePlotLine:
         
         # Split plot line into segments
         segments = [[]]
-        for x, y in visible_points:
+        for x, y in self._points:
             if math.isnan(y):
                 segments.append([])
             else:
