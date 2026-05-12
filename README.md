@@ -44,6 +44,32 @@ There are some useful keybinds available in the simulation window:
 * S - step the simulation (advance by one frame; if not paused pauses the simulation)
 * F1 - show help
 
+## Compatibility issues
+
+### MacOS
+
+Running simulations on MacOS is currently only supported inside IPython/Jupyter notebooks. This is because MacOS only allows managing windows on the main thread and `exerciser.run` is designed to run in the background.
+
+### Tk
+
+Running simulations and Tk at the same time can cause Python to freeze or crash with an unrecoverable error. This is due to some incompatibility between Tk and Pygame.
+
+When using Matplotlib, it is recommended to use a non-Tk backend to avoid issues. This is generally not relevant in Jupyter notebooks, because the default backend there is not Tk.
+
+<!--
+Running Tk and Pygame together occasionally causes Python to crash with the error message `Fatal Python error: PyEval_RestoreThread: NULL tstate`.
+The Tk backend is also kind of flaky in general, having issues handling KeyboardInterrupt and moving the window in front of other windows on every reload.
+Even if the Tk and Pygame crashing gets resolved it is probably a good idea to avoid the Tk backend.# TODO: What is the actual cause of this issue?
+
+The only reference to it I could find was https://stackoverflow.com/questions/58598836/pygame-event-get-fatal-python-error-pyeval-restorethread-null-tstate,
+which only speculates about the cause and provides no sources for anything.
+Note: The workarond in that post works, but causes Pygame to freeze if the Tk main loop is not running.
+Reliably detecting if the Tk main loop is running seems to be impossible without very dirty hacks, so this workaround is not viable for our use case. 
+
+TODO: This issue may be Windows specific.
+A comment in an old version of the TkAgg backend seems to imply this: https://github.com/matplotlib/matplotlib/blob/68f86b37bb294913513b7ee5106a5aaa1558969e/lib/matplotlib/backends/backend_tkagg.py#L597-L600.
+-->
+
 ## Minimum Python version
 
 This library should support Python 3.10 and above. Python 3.10 compatibility has been checked using static analysis tool [Vermin](https://github.com/netromdk/vermin).

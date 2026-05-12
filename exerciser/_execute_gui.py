@@ -7,10 +7,8 @@ import time
 import asyncio
 from contextvars import ContextVar
 import threading
-import warnings
 from typing import Any, Callable, Final, Sequence
 import traceback
-import matplotlib
 import pygame
 from ._shared import CodeRunError, Simulation, ValidationError
 
@@ -64,23 +62,6 @@ def run(create_simulation: Callable[[], Simulation]):
     
     Note: `create_simulation` may be called more than once to restart the simulation. It should return a new simulation object every time.
     """
-
-    if matplotlib.get_backend().lower() == 'tkagg':
-        # Running matplotlib with Tk backend and Pygame together occasionally causes Python to crash with the error message `Fatal Python error: PyEval_RestoreThread: NULL tstate`.
-        # The Tk backend is also kind of flaky in general, having issues handling KeyboardInterrupt and moving the window in front of other windows on every reload.
-        # Even if the Tk and Pygame crashing gets resolved it is probably a good idea to avoid the Tk backend.
-        # 
-        # TODO: What is the actual cause of this issue?
-        # The only reference to it I could find was https://stackoverflow.com/questions/58598836/pygame-event-get-fatal-python-error-pyeval-restorethread-null-tstate,
-        # which only speculates about the cause and provides no sources for anything.
-        # Note: The workarond in that post works, but causes Pygame to freeze if the Tk main loop is not running.
-        # Reliably detecting if the Tk main loop is running seems to be impossible without very dirty hacks, so this workaround is not viable for our use case. 
-        #
-        # TODO: This issue may be Windows specific.
-        # A comment in an old version of the TkAgg backend seems to imply this: https://github.com/matplotlib/matplotlib/blob/68f86b37bb294913513b7ee5106a5aaa1558969e/lib/matplotlib/backends/backend_tkagg.py#L597-L600.
-        tk_pygame_compat_warning = 'Matplotlib is using the Tk backend. Tk has compatibility issues with Pygame that may cause Python to crash. Using a different Matplotlib backend is recommended.'
-        warnings.warn(tk_pygame_compat_warning, RuntimeWarning)
-
     global _create_simulation, _recreate_simulation, _initialized, _parent_header, _timer
 
     # TODO: It might be necessary to add more locking for thread safety.
