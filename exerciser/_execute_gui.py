@@ -1,7 +1,7 @@
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 os.environ['SDL_MOUSE_FOCUS_CLICKTHROUGH'] = '1'
-#os.environ['SDL_HINT_FORCE_RAISEWINDOW'] = '1'
+# os.environ['SDL_HINT_FORCE_RAISEWINDOW'] = '1'
 import sys
 import time
 import asyncio
@@ -155,14 +155,6 @@ def _mainloop(sleep: bool):
         assert _create_simulation is not None
 
         running = True
-
-        # TODO: Moving Pygame into a separate thread has broken matplotlib compatibility outside of interactive notebooks.
-        # See comments labeled with 'Matplotlib compatibility' for specific issues.
-
-        # TODO: Matplotlib compatibility:
-        # When Pygame closes, it should close all the matplotlib figures as well.
-        # When matplotlib closes, it should close the Pygame window.
-        # Note that matplotlib figures could be created after Pygame has started.
 
         last_message = ""
         last_message_color = 'black'
@@ -336,18 +328,6 @@ def _mainloop(sleep: bool):
                 screen.blit(message_text_surface, (5, screen.get_height() - 25))
 
             pygame.display.flip()
-
-            # TODO: Matplotlib compatibility: draw_idle needs to be called regularly to make live updates to data work.
-            # On the other hand, calling draw_idle from a different thread for no good reason is probably a bad idea,
-            # so for maximum compatibility we currently don't do this automatically.
-            # Should we do this automatically in some cases?
-
-            # Example generic redraw logic:
-            # if tick % 3 == 0:
-            #     for manager in matplotlib._pylab_helpers.Gcf.get_all_fig_managers():
-            #         canvas = manager.canvas
-            #         if canvas.figure.stale:
-            #             canvas.draw_idle()
 
             _values_to_draw.set(None)
 
