@@ -59,8 +59,9 @@ When using Matplotlib, it is recommended to use a non-Tk backend to avoid issues
 <!--
 Running Tk and Pygame together occasionally causes Python to crash with the error message `Fatal Python error: PyEval_RestoreThread: NULL tstate`.
 The Tk backend is also kind of flaky in general, having issues handling KeyboardInterrupt and moving the window in front of other windows on every reload.
-Even if the Tk and Pygame crashing gets resolved it is probably a good idea to avoid the Tk backend.# TODO: What is the actual cause of this issue?
+Even if the Tk and Pygame crashing gets resolved it is probably a good idea to avoid the Tk backend.
 
+TODO: What is the actual cause of this issue?
 The only reference to it I could find was https://stackoverflow.com/questions/58598836/pygame-event-get-fatal-python-error-pyeval-restorethread-null-tstate,
 which only speculates about the cause and provides no sources for anything.
 Note: The workarond in that post works, but causes Pygame to freeze if the Tk main loop is not running.
